@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# Caches
+.cache/
+.parcel-cache/
+coverage/
+jest-cache/
+
+# Archives and packages
+*.tar.gz
+*.tgz
+ui-tsx-files.tar.gz
+
+# Misc
+.eslintcache
+/.pnp
+/.pnp.js
