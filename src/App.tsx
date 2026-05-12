@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { Icon } from './icons';
+import { MOCK } from './data';
 import { Sidebar, Topbar } from './shell';
 import { LoginScreen, Dashboard } from './screens-1';
 import { StudentsList, StudentProfile, StudentNew } from './screens-2';
@@ -127,13 +128,12 @@ export default function App() {
         role={T.role}
         collapsed={navCollapsed}
         onToggle={() => setNavCollapsed(!navCollapsed)}
-        user={currentUser || { full_name: 'Foydalanuvchi' }}
+        user={currentUser || MOCK.users[0]}
       />
       <div className="main">
         <Topbar
           crumbs={crumbs}
           role={T.role}
-          user={currentUser || { full_name: 'Foydalanuvchi' }}
           onRoleSwitch={(r) => { T.setTweak('role', r); showToast(`Rol o'zgartirildi: ${r}`); }}
           theme={T.theme}
           onTheme={(th) => T.setTweak('theme', th)}
@@ -141,7 +141,7 @@ export default function App() {
         />
         <div className="content">
           {route === 'dashboard' && <Dashboard role={T.role} onNav={navigate}/>} 
-          {route === 'students' && <StudentsList onOpen={(id) => { setStudentId(id); setRoute('students-profile'); }} onNew={() => setRoute('students-new')}/>}
+          {route === 'students' && <StudentsList onOpen={(id) => { setStudentId(id); setRoute('students-profile'); }} onNew={() => setRoute('students-new')}/>} 
           {route === 'students-profile' && <StudentProfile studentId={studentId} onBack={() => navigate('students')}/>} 
           {route === 'students-new' && <StudentNew onBack={() => navigate('students')} onCreated={() => { showToast("O'quvchi muvaffaqiyatli yaratildi"); navigate('students'); }}/>} 
           {route === 'groups' && <GroupsScreen onOpen={(id) => { setGroupId(id); }}/>} 
