@@ -66,30 +66,39 @@ export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
         </button>
       </div>
       <nav className="nav">
-        {NAV_ITEMS.map(section => {
-          const visible = section.items.filter(it => hasPerm(role, it.perm));
-          if (!visible.length) return null;
-          return (
-            <React.Fragment key={section.section}>
-              {!collapsed && <div className="nav-section">{section.section}</div>}
-              {visible.map(it => {
-                const Ic = I[it.icon];
-                return (
-                  <div key={it.id}
-                    className={'nav-item' + (active === it.id ? ' active' : '')}
-                    onClick={() => onNav(it.id)}
-                    title={collapsed ? it.label : ''}>
-                    <Ic size={17}/>
-                    {!collapsed && <>
-                      <span>{it.label}</span>
-                      {it.badge && <span className="nav-badge">{it.badge}</span>}
-                    </>}
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          );
-        })}
+        {(() => {
+          // Render NAV_ITEMS but skip duplicate target ids (show only first occurrence)
+          const seen = new Set();
+          return NAV_ITEMS.map(section => {
+            const visible = section.items.filter(it => {
+              if (!hasPerm(role, it.perm)) return false;
+              if (seen.has(it.id)) return false;
+              seen.add(it.id);
+              return true;
+            });
+            if (!visible.length) return null;
+            return (
+              <React.Fragment key={section.section}>
+                {!collapsed && <div className="nav-section">{section.section}</div>}
+                {visible.map(it => {
+                  const Ic = I[it.icon];
+                  return (
+                    <div key={it.id}
+                      className={'nav-item' + (active === it.id ? ' active' : '')}
+                      onClick={() => onNav(it.id)}
+                      title={collapsed ? it.label : ''}>
+                      <Ic size={17}/>
+                      {!collapsed && <>
+                        <span>{it.label}</span>
+                        {it.badge && <span className="nav-badge">{it.badge}</span>}
+                      </>}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            );
+          });
+        })()}
       </nav>
       <div className="sidebar-footer">
         <div className="avatar" style={{ background: '#0F1F4D' }}>
