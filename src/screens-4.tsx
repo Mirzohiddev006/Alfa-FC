@@ -19,6 +19,7 @@ import {
   apiGetReportsSummary,
   apiGetReportsRevenueDynamics,
   apiGetReportsPaymentsBySource,
+  apiPaymentsExcelUrl,
   apiGetWaitingList,
   apiCreateWaitingList,
   apiUpdateWaitingList,
@@ -607,6 +608,10 @@ export function TransactionsScreen({ onToast } = {}) {
     apiGetTransactions({ page_size: 200 }).then((res) => setRows(res?.data || [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  function handleExport() {
+    window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
+  }
+
   const list = rows.filter((r) => source === 'all' ? true : r.source === source);
   const total = list.reduce((s, r) => s + (r.amount || 0), 0);
 
@@ -627,7 +632,7 @@ export function TransactionsScreen({ onToast } = {}) {
             <option value="payme">Payme</option>
             <option value="terminal">Terminal</option>
           </select>
-          <button className="btn"><I.Download size={15} /> Export</button>
+          <button className="btn" onClick={handleExport}><I.Download size={15} /> Export</button>
         </div>
       </div>
 
@@ -680,6 +685,10 @@ export function ReportsScreen() {
 
   const maxRevenue = Math.max(1, ...dyn.map((d) => d.total_revenue || 0));
 
+  function handleExcel() {
+    window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -689,7 +698,7 @@ export function ReportsScreen() {
         </div>
         <div className="page-actions">
           <button className="btn"><I.Download size={15} /> PDF</button>
-          <button className="btn"><I.Download size={15} /> Excel</button>
+          <button className="btn" onClick={handleExcel}><I.Download size={15} /> Excel</button>
         </div>
       </div>
 

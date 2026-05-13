@@ -5,7 +5,7 @@ import { MOCK } from './data';
 import {
   apiGetGroups, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
   apiGetSessions, apiGetSessionDetails, apiCreateSession,
-  apiGetCoaches,
+  apiGetCoaches, apiGetGroupStudentsExportUrl, apiGetCoachGroupPerformanceTableExportUrl,
   apiMarkAttendance,
 } from './api';
 
@@ -47,6 +47,18 @@ export function GroupsScreen({ onOpen }) {
 
   React.useEffect(() => { loadData(); }, []);
 
+  async function handleExport() {
+    try {
+      const groupId = groups[0]?.id;
+      if (!groupId) return;
+      const url = await apiGetGroupStudentsExportUrl(groupId);
+      if (!url) return;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      alert('Export ochilmadi: ' + e.message);
+    }
+  }
+
   const coachMap = React.useMemo(() => {
     const m = {};
     coaches.forEach(c => { m[c.id] = c.full_name; });
@@ -86,7 +98,7 @@ export function GroupsScreen({ onOpen }) {
             <button className={'btn sm ' + (view === 'cards' ? '' : 'ghost')} style={{ height: 30, border: 'none', background: view === 'cards' ? 'var(--selected)' : 'transparent' }} onClick={() => setView('cards')}>Kartochkalar</button>
             <button className={'btn sm ' + (view === 'list' ? '' : 'ghost')} style={{ height: 30, border: 'none', background: view === 'list' ? 'var(--selected)' : 'transparent' }} onClick={() => setView('list')}>Ro'yxat</button>
           </div>
-          <button className="btn"><I.Download size={15}/> Export</button>
+          <button className="btn" onClick={handleExport}><I.Download size={15}/> Export</button>
           <button className="btn primary" onClick={() => setShowNew(true)}><I.Plus size={15}/> Yangi guruh</button>
         </div>
       </div>
@@ -455,6 +467,15 @@ export function PerformanceTable() {
   const group = M.groups[3];
   const students = M.students.filter(s => s.group_id === group.id && s.status === 'active').slice(0, 12);
 
+  async function handleExport() {
+    try {
+      const url = await apiGetCoachGroupPerformanceTableExportUrl(group.id, 2026);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      alert('Excel ochilmadi: ' + e.message);
+    }
+  }
+
   function cellFor(sid, mi) {
     const code = ((sid * 13 + mi * 7) % 11);
     if (code < 2) return { v: 'goal', n: 2 };
@@ -486,7 +507,7 @@ export function PerformanceTable() {
           <select style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             {M.groups.map(g => <option key={g.id} defaultValue={g.id === group.id}>{g.name}</option>)}
           </select>
-          <button className="btn"><I.Download size={15}/> Excel</button>
+          <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel</button>
           <button className="btn primary"><I.Plus size={15}/> O'yin qo'shish</button>
         </div>
       </div>

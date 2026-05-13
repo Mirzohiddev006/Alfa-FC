@@ -4,6 +4,28 @@ const BASE_URL = 'https://api.alpha.cognilabs.org';
 const TOKEN_KEY = 'alpha_token';
 const REFRESH_KEY = 'alpha_refresh';
 
+function unwrapData(json) {
+  return json?.data ?? json ?? null;
+}
+
+function unwrapDataArray(json) {
+  const data = unwrapData(json);
+  return Array.isArray(data) ? data : [];
+}
+
+function normalizeContractMonthlyFeePayload(data = {}) {
+  return {
+    monthly_fee_amount: data.monthly_fee_amount ?? data.monthly_fee ?? data.amount,
+  };
+}
+
+function normalizeContractDatesPayload(data = {}) {
+  return {
+    start_date: data.start_date ?? data.contract_start_date,
+    end_date: data.end_date ?? data.contract_end_date,
+  };
+}
+
 export function getToken() { return localStorage.getItem(TOKEN_KEY); }
 export function setTokens(access, refresh) {
   localStorage.setItem(TOKEN_KEY, access);
@@ -49,13 +71,18 @@ export async function apiLogin(phone_or_email, password) {
   let json;
   try { json = await res.json(); } catch { json = {}; }
   if (!res.ok) throw new Error(json.detail || 'Login xatolik');
-  setTokens(json.access_token, json.refresh_token);
-  return json;
+  const auth = json.data || json;
+  setTokens(auth.access_token, auth.refresh_token);
+  return auth;
 }
 
 export async function apiGetMe() {
-  const json = await apiFetch('/auth/me');
-  return json; // { user: UserWithRoles, permissions: string[] }
+  const data = unwrapData(await apiFetch('/auth/me'));
+  return {
+    user: data,
+    permissions: data?.permissions || [],
+    data,
+  };
 }
 
 export function apiLogout() { clearTokens(); }
@@ -126,11 +153,15 @@ export async function apiCreateStudent(formData) {
 }
 
 export async function apiUpdateStudent(id, formData) {
-  return apiFetch(`/students/${id}`, { method: 'PUT', body: formData });
+  return apiFetch(`/students/${id}`, { method: 'PATCH', body: formData });
 }
 
 export async function apiDeleteStudent(id) {
   return apiFetch(`/students/${id}`, { method: 'DELETE' });
+}
+
+export async function apiHardDeleteStudent(id) {
+  return apiFetch(`/students/${id}/hard-delete`, { method: 'DELETE' });
 }
 
 export async function apiGetStudentFullInfo(id) {
@@ -151,7 +182,37 @@ export async function apiGetStudentGateLogs(id) {
 }
 
 export async function apiGetStudentContracts(id) {
-  return apiFetch(`/students/${id}/contracts`);
+  return apiFetch(`/students/${id}/contract`);
+}
+
+export async function apiGetStudentContract(id) {
+  return apiGetStudentContracts(id);
+}
+
+export async function apiSearchStudents(query, params = {}) {
+  const q = new URLSearchParams({ query, ...params }).toString();
+  return apiFetch(`/students/search${q ? '?' + q : ''}`);
+}
+
+export async function apiGetStudentsComprehensiveExportUrl() {
+  return `${BASE_URL}/students/comprehensive-export`;
+}
+
+export async function apiGetStudentsAttendanceAll(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/students/attendances/all${q ? '?' + q : ''}`);
+}
+
+export async function apiDeleteStudentsBulk(ids) {
+  return apiFetch('/students/bulk-delete', { method: 'POST', body: JSON.stringify(ids) });
+}
+
+export async function apiUploadStudentPassport(id, formData) {
+  return apiFetch(`/students/${id}/passport`, { method: 'POST', body: formData });
+}
+
+export async function apiUploadStudentExtraFile(id, formData) {
+  return apiFetch(`/students/${id}/extra-file`, { method: 'POST', body: formData });
 }
 
 // Coaches
@@ -174,7 +235,7 @@ export async function apiCreateGroup(data) {
 }
 
 export async function apiUpdateGroup(id, data) {
-  return apiFetch(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  return apiFetch(`/groups/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
 export async function apiDeleteGroup(id) {
@@ -185,6 +246,10 @@ export async function apiGetGroupStudents(id) {
   return apiFetch(`/groups/${id}/students`);
 }
 
+export async function apiGetGroupStudentsExportUrl(id) {
+  return `${BASE_URL}/groups/${id}/export-students`;
+}
+
 // Sessions
 export async function apiGetSessions(params = {}) {
   const q = new URLSearchParams(params).toString();
@@ -193,6 +258,10 @@ export async function apiGetSessions(params = {}) {
 
 export async function apiCreateSession(data) {
   return apiFetch('/head-coach/sessions', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function apiCreateHeadCoachSessionsBulk(data) {
+  return apiFetch('/head-coach/sessions/bulk', { method: 'POST', body: JSON.stringify(data) });
 }
 
 export async function apiUpdateSession(id, data) {
@@ -211,6 +280,52 @@ export async function apiGetSessionDetails(id) {
 export async function apiGetCoachSessions(params = {}) {
   const q = new URLSearchParams(params).toString();
   return apiFetch(`/coach/sessions${q ? '?' + q : ''}`);
+}
+
+export async function apiGetCoachGroups() {
+  return apiFetch('/coach/groups');
+}
+
+export async function apiGetCoachAttendanceStats(groupId) {
+  return apiFetch(`/coach/groups/${groupId}/attendance-stats`);
+}
+
+export async function apiGetCoachStudentAttendanceStats(studentId) {
+  return apiFetch(`/coach/students/${studentId}/attendance-stats`);
+}
+
+export async function apiGetCoachMyAttendances(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/coach/my-attendances${q ? '?' + q : ''}`);
+}
+
+export async function apiGetCoachGroupPerformanceTable(groupId, params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/coach/groups/${groupId}/performance-table${q ? '?' + q : ''}`);
+}
+
+export async function apiSaveCoachGroupPerformanceTable(groupId, data) {
+  return apiFetch(`/coach/groups/${groupId}/performance-table`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function apiCreateCoachPerformanceTableColumn(groupId, data) {
+  return apiFetch(`/coach/groups/${groupId}/performance-table/columns`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function apiDeleteCoachPerformanceTableColumn(groupId, colId, season_year) {
+  return apiFetch(`/coach/groups/${groupId}/performance-table/columns/${colId}?season_year=${encodeURIComponent(season_year)}`, { method: 'DELETE' });
+}
+
+export async function apiReorderCoachPerformanceTableColumns(groupId, data) {
+  return apiFetch(`/coach/groups/${groupId}/performance-table/columns-reorder`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function apiGetCoachGroupPerformanceTableExportUrl(groupId, season_year) {
+  return `${BASE_URL}/coach/groups/${groupId}/performance-table/export?season_year=${encodeURIComponent(season_year)}`;
+}
+
+export async function apiUploadCoachSessionKonspekt(sessionId, formData) {
+  return apiFetch(`/coach/sessions/${sessionId}/upload-konspekt`, { method: 'POST', body: formData });
 }
 
 export async function apiMarkAttendance(sessionId, data) {
@@ -235,6 +350,15 @@ export async function apiGetContract(id) {
   return apiFetch(`/contracts/${id}`);
 }
 
+export async function apiGetTerminatedContracts(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/contracts/terminated${q ? '?' + q : ''}`);
+}
+
+export async function apiUpdateContract(id, data) {
+  return apiFetch(`/contracts/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
 export async function apiTerminateContract(id, data) {
   return apiFetch(`/contracts/${id}/terminate`, { method: 'POST', body: JSON.stringify(data) });
 }
@@ -244,11 +368,11 @@ export async function apiPatchContractStatus(id, data) {
 }
 
 export async function apiPatchContractMonthlyFee(id, data) {
-  return apiFetch(`/contracts/${id}/monthly-fee`, { method: 'PATCH', body: JSON.stringify(data) });
+  return apiFetch(`/contracts/${id}/monthly-fee`, { method: 'PATCH', body: JSON.stringify(normalizeContractMonthlyFeePayload(data)) });
 }
 
 export async function apiPatchContractDates(id, data) {
-  return apiFetch(`/contracts/${id}/dates`, { method: 'PATCH', body: JSON.stringify(data) });
+  return apiFetch(`/contracts/${id}/dates`, { method: 'PATCH', body: JSON.stringify(normalizeContractDatesPayload(data)) });
 }
 
 export async function apiRegenerateContractPdf(id) {
@@ -272,6 +396,11 @@ export function apiContractPdfUrl(id) {
 export async function apiGetTransactions(params = {}) {
   const q = new URLSearchParams(params).toString();
   return apiFetch(`/transactions${q ? '?' + q : ''}`);
+}
+
+export async function apiGetUnassignedTransactions(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/transactions/unassigned${q ? '?' + q : ''}`);
 }
 
 export async function apiGetTransactionsWithName(params = {}) {
@@ -304,6 +433,10 @@ export async function apiDeleteTransaction(id) {
   return apiFetch(`/transactions/${id}`, { method: 'DELETE' });
 }
 
+export async function apiDeleteTransactionsBulk(ids) {
+  return apiFetch('/transactions/bulk-delete', { method: 'POST', body: JSON.stringify(ids) });
+}
+
 // Gate
 export async function apiGetGateLogs(params = {}) {
   const q = new URLSearchParams(params).toString();
@@ -331,16 +464,20 @@ export async function apiGetFinanceReport(params = {}) {
 }
 
 export async function apiGetReportsSummary() {
-  return apiGetDashboard();
+  return unwrapData(await apiGetDashboard()) || {};
 }
 
 export async function apiGetReportsRevenueDynamics(group_by = 'month') {
   const q = new URLSearchParams({ group_by }).toString();
-  return apiFetch(`/reports/revenue-dynamics${q ? '?' + q : ''}`);
+  return unwrapDataArray(await apiFetch(`/reports/revenue-dynamics${q ? '?' + q : ''}`));
 }
 
 export async function apiGetReportsPaymentsBySource() {
-  return apiFetch('/reports/payments-by-source');
+  return unwrapDataArray(await apiFetch('/reports/payments-by-source'));
+}
+
+export async function apiGetReportsTerminatedSummary() {
+  return apiFetch('/reports/terminated-summary');
 }
 
 export async function apiGetAttendanceGroupsReport(params = {}) {
@@ -359,7 +496,7 @@ export function apiPaymentsExcelUrl(params = {}) {
 
 // Settings
 export async function apiGetSettings() {
-  return apiFetch('/settings/system');
+  return unwrapData(await apiFetch('/settings/system')) || {};
 }
 
 export async function apiPatchSettings(data) {
@@ -374,6 +511,14 @@ export async function apiUpdateSettings(data) {
 export async function apiGetWaitingList(params = {}) {
   const q = new URLSearchParams(params).toString();
   return apiFetch(`/waiting-list${q ? '?' + q : ''}`);
+}
+
+export async function apiGetWaitingListItem(id) {
+  return apiFetch(`/waiting-list/${id}`);
+}
+
+export async function apiGetWaitingListNext(group_id) {
+  return apiFetch(`/waiting-list/group/${group_id}/next`);
 }
 
 export async function apiCreateWaitingList(data) {

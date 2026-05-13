@@ -4,7 +4,7 @@ import { Icon } from './icons';
 import { MOCK } from './data';
 import {
   apiGetStudents, apiGetStudentFullInfo, apiGetStudentTransactions, apiGetStudentGateLogs,
-  apiGetGroups, apiCreateStudent,
+  apiGetGroups, apiCreateStudent, apiGetStudentsComprehensiveExportUrl,
 } from './api';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -67,6 +67,15 @@ export function StudentsList({ onOpen, onNew }) {
 
   React.useEffect(() => { setPage(1); }, [q, status, groupId]);
 
+  async function handleExport() {
+    try {
+      const url = await apiGetStudentsComprehensiveExportUrl();
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      alert('Export ochilmadi: ' + e.message);
+    }
+  }
+
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
   return (
@@ -77,7 +86,7 @@ export function StudentsList({ onOpen, onNew }) {
           <div className="page-sub">Akademiyaning barcha o'quvchilari · jami {students.length} ta</div>
         </div>
         <div className="page-actions">
-          <button className="btn"><I.Download size={15}/> Excel export</button>
+          <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel export</button>
           <button className="btn primary" onClick={onNew}><I.UserPlus size={15}/> Yangi o'quvchi</button>
         </div>
       </div>
@@ -213,32 +222,45 @@ export function StudentProfile({ studentId, onBack }) {
       <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14}/> O'quvchilar ro'yxati</button>
 
       <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
-        <div style={{ height: 90, background: 'linear-gradient(120deg, #0F1F4D 0%, #1B3A6F 100%)', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: 14, right: 16, display: 'flex', gap: 8 }}>
-            <button className="btn sm"><I.Edit size={13}/> Tahrirlash</button>
-            {contract && <button className="btn sm"><I.FileText size={13}/> Shartnoma</button>}
-            <button className="icon-btn" style={{ width: 32, height: 32 }}><I.More size={15}/></button>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, padding: '0 22px 18px', marginTop: -42 }}>
-          <div className="avatar xl" style={{ background: avatarColor(s.id), border: '4px solid var(--surface)', fontSize: 28 }}>
-            {s.first_name[0]}{s.last_name[0]}
-          </div>
-          <div style={{ flex: 1, paddingBottom: 6 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>{name}</h1>
-            <div style={{ display: 'flex', gap: 14, marginTop: 6, fontSize: 13, color: 'var(--muted)', flexWrap: 'wrap' }}>
-              <span>#{String(s.id).padStart(4, '0')}</span>
-              <span>·</span>
-              <span>{age} yosh ({s.date_of_birth})</span>
-              {group && <><span>·</span><span>{group.name}</span></>}
-              {coach && <><span>·</span><span>Murabbiy: {coach.full_name}</span></>}
+        <div style={{
+          padding: 22,
+          background: 'linear-gradient(135deg, #0F1F4D 0%, #173A78 55%, #1F4C9A 100%)',
+          position: 'relative',
+        }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 36%), radial-gradient(circle at left center, rgba(245,185,33,0.14), transparent 28%)',
+            pointerEvents: 'none',
+          }} />
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: '1 1 420px' }}>
+              <div className="avatar xl" style={{ background: avatarColor(s.id), border: '4px solid rgba(255,255,255,0.18)', boxShadow: '0 10px 30px rgba(0,0,0,0.22)', fontSize: 28 }}>
+                {s.first_name[0]}{s.last_name[0]}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+                  {s.status === 'active' && <span className="chip success" style={{ background: 'rgba(30, 138, 92, 0.15)', color: 'white', borderColor: 'rgba(255,255,255,0.12)' }}><span className="chip-dot" style={{ background: '#7EE2B8' }}></span>Faol o'quvchi</span>}
+                  {attendances.length > 0 && (
+                    <span className="chip navy" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', borderColor: 'rgba(255,255,255,0.12)' }}>Davomat {Math.round((presentCount / attendances.length) * 100)}%</span>
+                  )}
+                </div>
+                <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: '-0.01em', color: 'white', lineHeight: 1.15 }}>{name}</h1>
+                <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.78)', flexWrap: 'wrap' }}>
+                  <span>#{String(s.id).padStart(4, '0')}</span>
+                  <span>·</span>
+                  <span>{age} yosh ({s.date_of_birth})</span>
+                  {group && <><span>·</span><span>{group.name}</span></>}
+                  {coach && <><span>·</span><span>Murabbiy: {coach.full_name}</span></>}
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={{ paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {s.status === 'active' && <span className="chip success"><span className="chip-dot"></span>Faol o'quvchi</span>}
-            {attendances.length > 0 && (
-              <span className="chip navy">Davomat {Math.round((presentCount / attendances.length) * 100)}%</span>
-            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button className="btn sm"><I.Edit size={13}/> Tahrirlash</button>
+              {contract && <button className="btn sm"><I.FileText size={13}/> Shartnoma</button>}
+              <button className="icon-btn" style={{ width: 32, height: 32 }}><I.More size={15}/></button>
+            </div>
           </div>
         </div>
       </div>
