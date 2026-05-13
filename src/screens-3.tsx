@@ -137,7 +137,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                 <span className="chip navy">{groupStudents.length} o'quvchi</span>
               </div>
               <h2 style={{ margin: 0, fontSize: 22 }}>{selectedGroup.name}</h2>
-              <div style={{ marginTop: 6, color: 'var(--muted)', fontSize: 13.5 }}>{selectedGroup.description || 'Tavsif yo'q'}</div>
+              <div style={{ marginTop: 6, color: 'var(--muted)', fontSize: 13.5 }}>{selectedGroup.description || "Tavsif yo'q"}</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn ghost sm" onClick={() => onCloseGroup?.()}>Yopish</button>
@@ -166,7 +166,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                     <div className="avatar sm" style={{ background: avatarColor(s.id) }}>{s.first_name?.[0]}{s.last_name?.[0]}</div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.first_name} {s.last_name}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{s.phone || 'Telefon yo'q'}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{s.phone || "Telefon yo'q"}</div>
                     </div>
                   </div>
                 ))}
