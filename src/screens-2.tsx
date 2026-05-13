@@ -36,6 +36,7 @@ export function StudentsList({ onOpen, onNew }) {
   const [showImport, setShowImport] = React.useState(false);
   const [importFile, setImportFile] = React.useState(null);
   const [importing, setImporting] = React.useState(false);
+  const [openMenuStudentId, setOpenMenuStudentId] = React.useState(null);
   const PAGE_SIZE = 30;
 
   React.useEffect(() => {
@@ -184,8 +185,15 @@ export function StudentsList({ onOpen, onNew }) {
                       {s.status === 'inactive' && <span className="chip warning"><span className="chip-dot"></span>Nofaol</span>}
                       {s.status === 'archived' && <span className="chip"><span className="chip-dot"></span>Arxiv</span>}
                     </td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <button className="icon-btn" style={{ width: 32, height: 32, border: 'none', background: 'transparent' }}><I.More size={16}/></button>
+                    <td onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
+                      <button className="icon-btn" style={{ width: 32, height: 32, border: 'none', background: 'transparent' }} onClick={() => setOpenMenuStudentId(openMenuStudentId === s.id ? null : s.id)}><I.More size={16}/></button>
+                      {openMenuStudentId === s.id && (
+                        <div style={{ position: 'absolute', top: 32, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
+                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => { onOpen(s.id); setOpenMenuStudentId(null); }}>
+                            <I.Eye size={14} /> Ochish
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

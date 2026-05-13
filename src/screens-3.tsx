@@ -31,6 +31,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
   const [groupDetail, setGroupDetail] = React.useState(null);
   const [groupStudents, setGroupStudents] = React.useState([]);
   const [groupLoading, setGroupLoading] = React.useState(false);
+  const [openMenuGroupId, setOpenMenuGroupId] = React.useState(null);
 
   async function loadData() {
     setLoading(true);
@@ -227,7 +228,16 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                     <td>{coachName}</td>
                     <td style={{ fontVariantNumeric: 'tabular-nums' }}>{g.active_students_count ?? '—'}</td>
                     <td><span className="chip success">Faol</span></td>
-                    <td><button className="icon-btn" style={{ width: 30, height: 30 }}><I.More size={15}/></button></td>
+                    <td style={{ position: 'relative' }}>
+                      <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => { e.stopPropagation(); setOpenMenuGroupId(openMenuGroupId === g.id ? null : g.id); }}><I.More size={15}/></button>
+                      {openMenuGroupId === g.id && (
+                        <div style={{ position: 'absolute', top: 28, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
+                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpen?.(g.id); setOpenMenuGroupId(null); }}>
+                            <I.Eye size={14} /> Ko'rish
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

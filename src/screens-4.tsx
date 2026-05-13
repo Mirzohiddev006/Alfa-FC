@@ -14,6 +14,7 @@ import {
   apiCreateRole,
   apiUpdateRole,
   apiDeleteRole,
+  apiDeleteUser,
   apiGetSettings,
   apiUpdateSettings,
   apiGetTransactions,
@@ -67,6 +68,7 @@ export function ContractsScreen({ onOpenContract }) {
   const [loading, setLoading] = React.useState(true);
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
+  const [openMenuContractId, setOpenMenuContractId] = React.useState(null);
 
   React.useEffect(() => {
     apiGetContracts({ page_size: 200 })
@@ -148,7 +150,16 @@ export function ContractsScreen({ onOpenContract }) {
                   {c.status === 'cancelled' && <span className="chip"><span className="chip-dot"></span>Bekor</span>}
                   {c.status === 'finished' && <span className="chip warning"><span className="chip-dot"></span>Tugagan</span>}
                 </td>
-                <td><button className="icon-btn" style={{ width: 30, height: 30 }}><I.More size={15} /></button></td>
+                <td style={{ position: 'relative' }}>
+                  <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => { e.stopPropagation(); setOpenMenuContractId(openMenuContractId === c.id ? null : c.id); }}><I.More size={15} /></button>
+                  {openMenuContractId === c.id && (
+                    <div style={{ position: 'absolute', top: 28, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
+                      <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpenContract?.(c.id); setOpenMenuContractId(null); }}>
+                        <I.Eye size={14} /> Ko'rish
+                      </button>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -344,6 +355,8 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
   const [loading, setLoading] = React.useState(true);
   const [tab, setTab] = React.useState(initialView);
   const [newRole, setNewRole] = React.useState({ name: '', display_name: '', permissions: [] });
+  const [openMenuUserId, setOpenMenuUserId] = React.useState(null);
+  const [deletingUserId, setDeletingUserId] = React.useState(null);
 
   const PERMS = ['students.read', 'students.write', 'groups.read', 'groups.write', 'payments.read', 'payments.write', 'users.read', 'users.write', 'settings.write'];
 
@@ -379,6 +392,18 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
     load();
   }
 
+  async function deleteUser(userId) {
+    if (!confirm("Foydalanuvchini o'chirish:  rostdan ham?")) return;
+    setDeletingUserId(userId);
+    try {
+      await apiDeleteUser(userId);
+      setOpenMenuUserId(null);
+      load();
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
+
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
   return (
@@ -408,7 +433,16 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
                   <td>{u.username}</td>
                   <td><span className="chip navy">{u.role_name || '—'}</span></td>
                   <td>{u.is_active ? <span className="chip success">Faol</span> : <span className="chip">Nofaol</span>}</td>
-                  <td><button className="icon-btn" style={{ width: 30, height: 30 }}><I.More size={15} /></button></td>
+                  <td style={{ position: 'relative' }}>
+                    <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => { e.stopPropagation(); setOpenMenuUserId(openMenuUserId === u.id ? null : u.id); }}><I.More size={15} /></button>
+                    {openMenuUserId === u.id && (
+                      <div style={{ position: 'absolute', top: 28, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
+                        <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => deleteUser(u.id)} disabled={deletingUserId === u.id}>
+                          <I.Trash2 size={14} /> {deletingUserId === u.id ? 'O\'chirilmoqda...' : "O'chirish"}
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
