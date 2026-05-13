@@ -44,8 +44,18 @@ function hasPerm(role, perm) {
   return p.includes(perm);
 }
 
+function getInitials(name) {
+  return String(name || 'AY')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('') || 'AY';
+}
+
 export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
   const I = Icon;
+  const fullName = user?.full_name || user?.name || user?.email || 'Alpha User';
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -83,11 +93,11 @@ export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
       </nav>
       <div className="sidebar-footer">
         <div className="avatar" style={{ background: '#0F1F4D' }}>
-          {user.full_name.split(' ').map(p => p[0]).slice(0, 2).join('')}
+          {getInitials(fullName)}
         </div>
         {!collapsed && (
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, minWidth: 0, flex: 1 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.full_name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName}</span>
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{role}</span>
           </div>
         )}
