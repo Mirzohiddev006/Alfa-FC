@@ -5,6 +5,7 @@ import { MOCK } from './data';
 import {
   apiGetStudents, apiGetStudentFullInfo, apiGetStudentTransactions, apiGetStudentGateLogs,
   apiGetGroups, apiCreateStudent, apiGetStudentsComprehensiveExportUrl,
+  apiImportStudents, apiGetStudentAttendanceReport,
 } from './api';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -32,6 +33,9 @@ export function StudentsList({ onOpen, onNew }) {
   const [groupId, setGroupId] = React.useState('all');
   const [selected, setSelected] = React.useState([]);
   const [page, setPage] = React.useState(1);
+  const [showImport, setShowImport] = React.useState(false);
+  const [importFile, setImportFile] = React.useState(null);
+  const [importing, setImporting] = React.useState(false);
   const PAGE_SIZE = 30;
 
   React.useEffect(() => {
@@ -76,6 +80,31 @@ export function StudentsList({ onOpen, onNew }) {
     }
   }
 
+  async function handleImport() {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', importFile);
+      await apiImportStudents(fd);
+      setShowImport(false);
+      setImportFile(null);
+      setSelected([]);
+      await Promise.all([
+        apiGetStudents({ page_size: 200 }),
+        apiGetGroups({ page_size: 100 }),
+      ]).then(([sRes, gRes]) => {
+        setStudents(sRes?.data || []);
+        setGroups(gRes?.data || []);
+      });
+      alert('Import muvaffaqiyatli bajarildi');
+    } catch (e) {
+      alert('Import xatoligi: ' + e.message);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
   return (
@@ -86,6 +115,7 @@ export function StudentsList({ onOpen, onNew }) {
           <div className="page-sub">Akademiyaning barcha o'quvchilari · jami {students.length} ta</div>
         </div>
         <div className="page-actions">
+          <button className="btn" onClick={() => setShowImport(true)}><I.Upload size={15}/> Import</button>
           <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel export</button>
           <button className="btn primary" onClick={onNew}><I.UserPlus size={15}/> Yangi o'quvchi</button>
         </div>
@@ -176,6 +206,28 @@ export function StudentsList({ onOpen, onNew }) {
           </div>
         </div>
       </div>
+
+      {showImport && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 120 }} onClick={() => setShowImport(false)}>
+          <div className="card" style={{ width: 520, padding: 18 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <h3 style={{ margin: 0 }}>O'quvchilarni import qilish</h3>
+              <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setShowImport(false)}><I.X size={15} /></button>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
+              Excel faylda `first_name`, `last_name`, `date_of_birth`, `height`, `weight`, `pnfl` ustunlari bo'lishi kerak.
+            </div>
+            <div className="field" style={{ marginBottom: 14 }}>
+              <label>Excel fayl</label>
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn ghost" onClick={() => setShowImport(false)}>Bekor</button>
+              <button className="btn primary" onClick={handleImport} disabled={!importFile || importing}>{importing ? 'Yuklanmoqda...' : 'Import qilish'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -185,6 +237,7 @@ export function StudentProfile({ studentId, onBack }) {
   const [info, setInfo] = React.useState(null);
   const [transactions, setTransactions] = React.useState([]);
   const [gateLogs, setGateLogs] = React.useState([]);
+  const [attendanceReport, setAttendanceReport] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [tab, setTab] = React.useState('overview');
 
@@ -195,10 +248,12 @@ export function StudentProfile({ studentId, onBack }) {
       apiGetStudentFullInfo(studentId),
       apiGetStudentTransactions(studentId),
       apiGetStudentGateLogs(studentId),
-    ]).then(([infoRes, txRes, gateRes]) => {
+      apiGetStudentAttendanceReport(studentId),
+    ]).then(([infoRes, txRes, gateRes, reportRes]) => {
       setInfo(infoRes?.data || null);
       setTransactions(txRes?.data || []);
       setGateLogs(gateRes?.data || []);
+      setAttendanceReport(reportRes?.data || null);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [studentId]);
 
@@ -320,6 +375,20 @@ export function StudentProfile({ studentId, onBack }) {
                     <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{it.v}</div>
                   </div>
                 ))}
+                {attendanceReport && (
+                  <div style={{ padding: 12, background: 'rgba(15,31,77,0.08)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>Rasmiy hisobot</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>attendance/students/{studentId}</div>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'right' }}>
+                      {attendanceReport.total_sessions || 0} sessiya
+                      <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>
+                        {attendanceReport.present_count || 0} / {attendanceReport.absent_count || 0} / {attendanceReport.late_count || 0}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

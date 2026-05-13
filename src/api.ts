@@ -209,6 +209,11 @@ export async function apiGetStudentGateLogs(id) {
   return apiFetch(`/students/${id}/gatelogs`);
 }
 
+export async function apiGetStudentAttendanceReport(id, params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/reports/attendance/students/${id}${q ? '?' + q : ''}`);
+}
+
 export async function apiGetStudentContracts(id) {
   return apiFetch(`/students/${id}/contract`);
 }
@@ -235,6 +240,10 @@ export async function apiDeleteStudentsBulk(ids) {
   return apiFetch('/students/bulk-delete', { method: 'POST', body: JSON.stringify(ids) });
 }
 
+export async function apiImportStudents(formData) {
+  return apiFetch('/import/students', { method: 'POST', body: formData });
+}
+
 export async function apiUploadStudentPassport(id, formData) {
   return apiFetch(`/students/${id}/passport`, { method: 'POST', body: formData });
 }
@@ -246,6 +255,10 @@ export async function apiUploadStudentExtraFile(id, formData) {
 // Coaches
 export async function apiGetCoaches() {
   return apiFetch('/users/coaches');
+}
+
+export async function apiGetHeadCoachGroups() {
+  return apiFetch('/head-coach/groups');
 }
 
 // Groups
@@ -302,6 +315,10 @@ export async function apiDeleteSession(id) {
 
 export async function apiGetSessionDetails(id) {
   return apiFetch(`/head-coach/sessions/${id}`);
+}
+
+export async function apiGetCoachSessionDetails(id) {
+  return apiFetch(`/coach/sessions/${id}`);
 }
 
 // Attendance (coach)
@@ -362,6 +379,13 @@ export async function apiMarkAttendance(sessionId, data) {
 
 export async function apiUpdateAttendance(sessionId, data) {
   return apiFetch(`/coach/sessions/${sessionId}/attendance`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function apiMarkBulkAttendance(sessionId, attendances) {
+  return apiFetch(`/coach/sessions/${sessionId}/bulk-attendance`, {
+    method: 'POST',
+    body: JSON.stringify({ session_id: sessionId, attendances }),
+  });
 }
 
 // Contracts
@@ -465,6 +489,10 @@ export async function apiDeleteTransactionsBulk(ids) {
   return apiFetch('/transactions/bulk-delete', { method: 'POST', body: JSON.stringify(ids) });
 }
 
+export async function apiGetTransaction(id) {
+  return apiFetch(`/transactions/${id}`);
+}
+
 // Gate
 export async function apiGetGateLogs(params = {}) {
   const q = buildQuery(params, ['student_id', 'from_date', 'to_date', 'page', 'allowed'], {}, 100);
@@ -513,6 +541,11 @@ export async function apiGetAttendanceGroupsReport(params = {}) {
   return apiFetch(`/reports/attendance/groups${q ? '?' + q : ''}`);
 }
 
+export function apiPayersExportUrl(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return `${BASE_URL}/reports/payers/export${q ? '?' + q : ''}`;
+}
+
 export function apiDebtorsExportUrl() {
   return `${BASE_URL}/reports/debtors/export`;
 }
@@ -520,6 +553,26 @@ export function apiDebtorsExportUrl() {
 export function apiPaymentsExcelUrl(params = {}) {
   const q = new URLSearchParams(params).toString();
   return `${BASE_URL}/reports/payments-excel${q ? '?' + q : ''}`;
+}
+
+export async function apiGetArchiveStats(year) {
+  return apiFetch(`/archive/stats/${year}`);
+}
+
+export async function apiArchiveYear(year) {
+  return apiFetch(`/archive/year/${year}`, { method: 'POST' });
+}
+
+export async function apiUnarchiveYear(year) {
+  return apiFetch(`/archive/unarchive/year/${year}`, { method: 'POST' });
+}
+
+export async function apiTriggerManualBackup() {
+  return apiFetch('/backup/manual', { method: 'POST' });
+}
+
+export async function apiGetBackupStatus() {
+  return apiFetch('/backup/status');
 }
 
 // Settings

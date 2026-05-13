@@ -17,14 +17,24 @@ import {
   apiGetSettings,
   apiUpdateSettings,
   apiGetTransactions,
+  apiGetTransactionsWithName,
+  apiGetTransaction,
   apiGetReportsSummary,
   apiGetReportsRevenueDynamics,
   apiGetReportsPaymentsBySource,
+  apiGetAttendanceGroupsReport,
+  apiDebtorsExportUrl,
+  apiPayersExportUrl,
   apiPaymentsExcelUrl,
   apiGetWaitingList,
   apiCreateWaitingList,
   apiUpdateWaitingList,
   apiDeleteWaitingList,
+  apiGetArchiveStats,
+  apiArchiveYear,
+  apiUnarchiveYear,
+  apiTriggerManualBackup,
+  apiGetBackupStatus,
 } from './api';
 
 const fmt = new Intl.NumberFormat('uz-UZ');
@@ -479,17 +489,34 @@ export function SettingsScreen({ theme, setTheme } = {}) {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('general');
+  const [adminYear, setAdminYear] = React.useState(new Date().getFullYear());
+  const [archiveStats, setArchiveStats] = React.useState(null);
+  const [backupStatus, setBackupStatus] = React.useState(null);
+  const [adminLoading, setAdminLoading] = React.useState(false);
 
   const tabDefs = [
     { id: 'general', label: 'Umumiy', icon: I.Settings },
     { id: 'billing', label: "To'lov", icon: I.CreditCard },
     { id: 'security', label: 'Xavfsizlik', icon: I.Shield },
     { id: 'integrations', label: 'Integratsiya', icon: I.Link },
+    { id: 'admin', label: 'Admin', icon: I.AlertTriangle },
   ];
 
   React.useEffect(() => {
     apiGetSettings().then((res) => setSettings(res || {})).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  React.useEffect(() => {
+    if (activeTab !== 'admin') return;
+    setAdminLoading(true);
+    Promise.all([
+      apiGetArchiveStats(adminYear),
+      apiGetBackupStatus(),
+    ]).then(([aRes, bRes]) => {
+      setArchiveStats(aRes?.data || null);
+      setBackupStatus(bRes?.data || null);
+    }).catch(() => {}).finally(() => setAdminLoading(false));
+  }, [activeTab, adminYear]);
 
   function setVal(k, v) { setSettings((p) => ({ ...p, [k]: v })); }
 
@@ -502,6 +529,31 @@ export function SettingsScreen({ theme, setTheme } = {}) {
       alert('Xatolik: ' + e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runBackup() {
+    try {
+      await apiTriggerManualBackup();
+      alert('Backup boshlandi');
+    } catch (e) {
+      alert('Backup xatoligi: ' + e.message);
+    }
+  }
+
+  async function archiveYear(action) {
+    try {
+      const year = Number(adminYear);
+      if (!year) return;
+      if (action === 'archive') await apiArchiveYear(year);
+      else await apiUnarchiveYear(year);
+      await Promise.all([apiGetArchiveStats(year), apiGetBackupStatus()]).then(([aRes, bRes]) => {
+        setArchiveStats(aRes?.data || null);
+        setBackupStatus(bRes?.data || null);
+      });
+      alert(action === 'archive' ? 'Arxivlandi' : 'Arxivdan olindi');
+    } catch (e) {
+      alert('Admin amali xatoligi: ' + e.message);
     }
   }
 
@@ -592,6 +644,38 @@ export function SettingsScreen({ theme, setTheme } = {}) {
               <div className="field"><label>SMS provider token</label><input value={settings.sms_token || ''} onChange={(e) => setVal('sms_token', e.target.value)} /></div>
             </div>
           )}
+
+          {activeTab === 'admin' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div className="card-title" style={{ marginBottom: 12 }}>Arxiv boshqaruvi</div>
+                <div className="field" style={{ marginBottom: 12 }}>
+                  <label>Yil</label>
+                  <input type="number" value={adminYear} onChange={(e) => setAdminYear(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <button className="btn" onClick={() => archiveYear('archive')} disabled={adminLoading}>Arxivlash</button>
+                  <button className="btn ghost" onClick={() => archiveYear('unarchive')} disabled={adminLoading}>Arxivdan olish</button>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>Arxiv statistikasi</div>
+                <div style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 8, fontSize: 13 }}>
+                  {archiveStats ? JSON.stringify(archiveStats, null, 2) : (adminLoading ? 'Yuklanmoqda...' : "Ma'lumot yoq")}
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div className="card-title" style={{ marginBottom: 12 }}>Backup</div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>Qo'lda backup yaratish va statusni ko'rish</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <button className="btn primary" onClick={runBackup} disabled={adminLoading}>Backup yaratish</button>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>Backup holati</div>
+                <div style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 8, fontSize: 13 }}>
+                  {backupStatus ? JSON.stringify(backupStatus, null, 2) : (adminLoading ? 'Yuklanmoqda...' : "Ma'lumot yoq")}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -604,13 +688,27 @@ export function TransactionsScreen({ onToast } = {}) {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [source, setSource] = React.useState('all');
+  const [detail, setDetail] = React.useState(null);
+  const [detailLoading, setDetailLoading] = React.useState(false);
 
   React.useEffect(() => {
-    apiGetTransactions({ page_size: 200 }).then((res) => setRows(res?.data || [])).catch(() => {}).finally(() => setLoading(false));
+    apiGetTransactionsWithName({ page_size: 200 }).then((res) => setRows(res?.data || [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   function handleExport() {
     window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
+  }
+
+  async function openDetail(id) {
+    setDetailLoading(true);
+    try {
+      const res = await apiGetTransaction(id);
+      setDetail(res?.data || null);
+    } catch (e) {
+      alert('Tranzaksiya ochilmadi: ' + e.message);
+    } finally {
+      setDetailLoading(false);
+    }
   }
 
   const list = rows.filter((r) => source === 'all' ? true : r.source === source);
@@ -642,7 +740,7 @@ export function TransactionsScreen({ onToast } = {}) {
           <thead><tr><th>Sana</th><th>O'quvchi</th><th>Manba</th><th>Oylar</th><th style={{ textAlign: 'right' }}>Summa</th><th>Status</th></tr></thead>
           <tbody>
             {list.map((t) => (
-              <tr key={t.id}>
+              <tr key={t.id} onClick={() => openDetail(t.id)} style={{ cursor: 'pointer' }}>
                 <td style={{ fontVariantNumeric: 'tabular-nums' }}>{(t.paid_at || '').slice(0, 10)}</td>
                 <td>{t.student_name || `#${t.student_id}`}</td>
                 <td><span className="chip">{t.source}</span></td>
@@ -658,6 +756,38 @@ export function TransactionsScreen({ onToast } = {}) {
           </tbody>
         </table>
       </div>
+
+      {detail && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setDetail(null)}>
+          <div className="card" style={{ width: 560, padding: 18 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>Tranzaksiya #{detail.id}</h3>
+              <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setDetail(null)}><I.X size={15} /></button>
+            </div>
+            {detailLoading ? (
+              <div className="empty" style={{ padding: 24 }}>Yuklanmoqda...</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {[
+                  ['Summa', `${fmt.format(detail.amount || 0)} so'm`],
+                  ['Manba', detail.source],
+                  ['Status', detail.status],
+                  ['Sana', detail.paid_at || '—'],
+                  ['Oylar', (detail.payment_months || []).join(', ') || '—'],
+                  ['Student', detail.student_full_name || detail.student_id || '—'],
+                  ['Contract', detail.contract_id || '—'],
+                  ['External ID', detail.external_id || '—'],
+                ].map(([k, v]) => (
+                  <div key={k} className="field" style={{ margin: 0 }}>
+                    <label>{k}</label>
+                    <div style={{ padding: '9px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)', fontSize: 13.5 }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -668,14 +798,21 @@ export function ReportsScreen() {
   const [summary, setSummary] = React.useState(null);
   const [dyn, setDyn] = React.useState([]);
   const [bySource, setBySource] = React.useState([]);
+  const [attendanceGroups, setAttendanceGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    Promise.all([apiGetReportsSummary(), apiGetReportsRevenueDynamics('month'), apiGetReportsPaymentsBySource()])
-      .then(([s, d, p]) => {
+    Promise.all([
+      apiGetReportsSummary(),
+      apiGetReportsRevenueDynamics('month'),
+      apiGetReportsPaymentsBySource(),
+      apiGetAttendanceGroupsReport(),
+    ])
+      .then(([s, d, p, a]) => {
         setSummary(s || null);
         setDyn(d || []);
         setBySource(p || []);
+        setAttendanceGroups(a?.data || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -690,6 +827,14 @@ export function ReportsScreen() {
     window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
   }
 
+  function handleDebtorsExport() {
+    window.open(apiDebtorsExportUrl(), '_blank', 'noopener,noreferrer');
+  }
+
+  function handlePayersExport() {
+    window.open(apiPayersExportUrl(), '_blank', 'noopener,noreferrer');
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -698,7 +843,8 @@ export function ReportsScreen() {
           <div className="page-sub">Dashboard va moliyaviy ko'rsatkichlar</div>
         </div>
         <div className="page-actions">
-          <button className="btn"><I.Download size={15} /> PDF</button>
+          <button className="btn" onClick={handleDebtorsExport}><I.Download size={15} /> Qarzdorlar</button>
+          <button className="btn" onClick={handlePayersExport}><I.Download size={15} /> To'lovchilar</button>
           <button className="btn" onClick={handleExcel}><I.Download size={15} /> Excel</button>
         </div>
       </div>
@@ -744,6 +890,26 @@ export function ReportsScreen() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 14, padding: 16 }}>
+        <div className="card-title" style={{ marginBottom: 12 }}>Davomat bo'yicha guruhlar</div>
+        {attendanceGroups.length === 0 ? (
+          <div className="empty" style={{ padding: 18 }}>Hisobot topilmadi</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            {attendanceGroups.map((g) => (
+              <div key={g.group_id} style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>{g.group_name}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{g.total_sessions} sessiya · {g.total_students} o'quvchi</div>
+                <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ width: `${g.attendance_percentage || 0}%`, height: '100%', background: 'var(--brand-navy)' }} />
+                </div>
+                <div style={{ fontSize: 12.5, marginTop: 6, fontWeight: 700 }}>{g.attendance_percentage || 0}%</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,10 +3,10 @@ import React from 'react';
 import { Icon } from './icons';
 import { MOCK } from './data';
 import {
-  apiGetGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
-  apiGetSessions, apiGetSessionDetails, apiCreateSession,
+  apiGetGroups, apiGetHeadCoachGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
+  apiGetSessions, apiGetSessionDetails, apiGetCoachSessionDetails, apiCreateSession,
   apiGetCoaches, apiGetGroupStudentsExportUrl, apiGetCoachGroupPerformanceTableExportUrl,
-  apiMarkAttendance,
+  apiMarkAttendance, apiMarkBulkAttendance,
 } from './api';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -299,7 +299,7 @@ export function SessionsScreen({ onMark }) {
   React.useEffect(() => {
     Promise.all([
       apiGetSessions(),
-      apiGetGroups({ page_size: 100 }),
+      apiGetHeadCoachGroups(),
     ]).then(([sRes, gRes]) => {
       setSessions(sRes?.data || []);
       setGroups(gRes?.data || []);
@@ -483,7 +483,7 @@ export function AttendanceMark({ sessionId, onBack }) {
 
   React.useEffect(() => {
     if (!sessionId) return;
-    apiGetSessionDetails(sessionId).then(async (sRes) => {
+    apiGetCoachSessionDetails(sessionId).then(async (sRes) => {
       const sess = sRes?.data;
       setSession(sess);
       if (sess?.group_id) {
@@ -511,7 +511,7 @@ export function AttendanceMark({ sessionId, onBack }) {
         status: marks[s.id] || 'absent',
         comment: comments[s.id] || undefined,
       }));
-      await apiMarkAttendance(sessionId, { attendances });
+      await apiMarkBulkAttendance(sessionId, attendances);
       onBack?.();
     } catch (e) {
       alert('Xatolik: ' + e.message);
