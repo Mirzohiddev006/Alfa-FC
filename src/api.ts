@@ -1,5 +1,5 @@
 // @ts-nocheck
-const BASE_URL = 'http://localhost:8008';
+const BASE_URL = 'https://api.alpha.cognilabs.org';
 
 const TOKEN_KEY = 'alpha_token';
 const REFRESH_KEY = 'alpha_refresh';

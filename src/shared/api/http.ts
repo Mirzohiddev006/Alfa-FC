@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { tokenStore } from './token';
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8008').replace(/\/$/, '');
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://api.alpha.cognilabs.org').replace(/\/$/, '');
 
 type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
 
