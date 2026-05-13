@@ -3,7 +3,7 @@ import React from 'react';
 import { Icon } from './icons';
 import { MOCK } from './data';
 import {
-  apiGetGroups, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
+  apiGetGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
   apiGetSessions, apiGetSessionDetails, apiCreateSession,
   apiGetCoaches, apiGetGroupStudentsExportUrl, apiGetCoachGroupPerformanceTableExportUrl,
   apiMarkAttendance,
@@ -19,7 +19,7 @@ function sessionStatus(session_date) {
   return 'completed';
 }
 
-export function GroupsScreen({ onOpen }) {
+export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = {}) {
   const I = Icon;
   const [groups, setGroups] = React.useState([]);
   const [coaches, setCoaches] = React.useState([]);
@@ -28,6 +28,9 @@ export function GroupsScreen({ onOpen }) {
   const [showNew, setShowNew] = React.useState(false);
   const [newGroup, setNewGroup] = React.useState({ name: '', description: '', coach_id: '' });
   const [saving, setSaving] = React.useState(false);
+  const [groupDetail, setGroupDetail] = React.useState(null);
+  const [groupStudents, setGroupStudents] = React.useState([]);
+  const [groupLoading, setGroupLoading] = React.useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -46,6 +49,26 @@ export function GroupsScreen({ onOpen }) {
   }
 
   React.useEffect(() => { loadData(); }, []);
+
+  React.useEffect(() => {
+    if (!selectedGroupId) {
+      setGroupDetail(null);
+      setGroupStudents([]);
+      return;
+    }
+
+    setGroupLoading(true);
+    Promise.all([
+      apiGetGroup(selectedGroupId),
+      apiGetGroupStudents(selectedGroupId),
+    ])
+      .then(([gRes, sRes]) => {
+        setGroupDetail(gRes?.data || null);
+        setGroupStudents(sRes?.data || []);
+      })
+      .catch(() => {})
+      .finally(() => setGroupLoading(false));
+  }, [selectedGroupId]);
 
   async function handleExport() {
     try {
@@ -86,6 +109,8 @@ export function GroupsScreen({ onOpen }) {
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
+  const selectedGroup = groupDetail || groups.find(g => g.id === selectedGroupId) || null;
+
   return (
     <div>
       <div className="page-head">
@@ -102,6 +127,54 @@ export function GroupsScreen({ onOpen }) {
           <button className="btn primary" onClick={() => setShowNew(true)}><I.Plus size={15}/> Yangi guruh</button>
         </div>
       </div>
+
+      {selectedGroup && (
+        <div className="card" style={{ marginBottom: 16, padding: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+                <span className="chip success"><span className="chip-dot"></span>Faol guruh</span>
+                <span className="chip navy">{groupStudents.length} o'quvchi</span>
+              </div>
+              <h2 style={{ margin: 0, fontSize: 22 }}>{selectedGroup.name}</h2>
+              <div style={{ marginTop: 6, color: 'var(--muted)', fontSize: 13.5 }}>{selectedGroup.description || 'Tavsif yo'q'}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn ghost sm" onClick={() => onCloseGroup?.()}>Yopish</button>
+            </div>
+          </div>
+
+          {groupLoading ? (
+            <div className="empty" style={{ padding: 20 }}>Yuklanmoqda...</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
+              <StatCard label="Murabbiy" value={selectedGroup.coach_name || coachMap[selectedGroup.coach_id] || '—'} />
+              <StatCard label="Imkoniyat" value={selectedGroup.capacity ?? '—'} />
+              <StatCard label="Faol o'quvchi" value={selectedGroup.active_students_count ?? groupStudents.filter(s => s.status === 'active').length} />
+              <StatCard label="Jami o'quvchi" value={groupStudents.length} />
+            </div>
+          )}
+
+          <div style={{ marginTop: 16 }}>
+            <div className="card-title" style={{ marginBottom: 10 }}>Guruhdagi o'quvchilar</div>
+            {groupStudents.length === 0 ? (
+              <div className="empty" style={{ padding: 20 }}>O'quvchilar topilmadi</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+                {groupStudents.slice(0, 12).map((s) => (
+                  <div key={s.id} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div className="avatar sm" style={{ background: avatarColor(s.id) }}>{s.first_name?.[0]}{s.last_name?.[0]}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.first_name} {s.last_name}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{s.phone || 'Telefon yo'q'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {view === 'cards' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
@@ -193,12 +266,33 @@ export function GroupsScreen({ onOpen }) {
   );
 }
 
+function StatCard({ label, value }) {
+  return (
+    <div style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 11.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>{label}</div>
+      <div style={{ marginTop: 6, fontSize: 14, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
 export function SessionsScreen({ onMark }) {
   const I = Icon;
   const [sessions, setSessions] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState('today');
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [newSession, setNewSession] = React.useState({
+    group_id: '',
+    session_date: todayIso,
+    topic: '',
+    start_time: '10:00',
+    end_time: '11:00',
+    station: '',
+    description: '',
+  });
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -243,6 +337,33 @@ export function SessionsScreen({ onMark }) {
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
+  async function handleCreateSession() {
+    if (!newSession.group_id || !newSession.topic.trim() || !newSession.session_date) {
+      alert('Guruh, sana va mavzu majburiy');
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiCreateSession({
+        group_id: Number(newSession.group_id),
+        session_date: newSession.session_date,
+        topic: newSession.topic.trim(),
+        start_time: newSession.start_time,
+        end_time: newSession.end_time,
+        station: newSession.station.trim() || undefined,
+        description: newSession.description.trim() || undefined,
+      });
+      setShowCreate(false);
+      setNewSession((p) => ({ ...p, topic: '', station: '', description: '' }));
+      const [sRes] = await Promise.all([apiGetSessions({ page_size: 100 })]);
+      setSessions(sRes?.data || []);
+    } catch (e) {
+      alert('Sessiya yaratilmadi: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -252,7 +373,7 @@ export function SessionsScreen({ onMark }) {
         </div>
         <div className="page-actions">
           <button className="btn"><I.Calendar size={15}/> Hafta</button>
-          <button className="btn primary"><I.Plus size={15}/> Sessiya rejalashtirish</button>
+          <button className="btn primary" onClick={() => setShowCreate(true)}><I.Plus size={15}/> Sessiya rejalashtirish</button>
         </div>
       </div>
 
@@ -299,6 +420,54 @@ export function SessionsScreen({ onMark }) {
           </tbody>
         </table>
       </div>
+
+      {showCreate && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }} onClick={() => setShowCreate(false)}>
+          <div className="card" style={{ width: 560, padding: 22, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Sessiya rejalashtirish</h3>
+              <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setShowCreate(false)}><I.X size={16}/></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="field">
+                <label>Guruh <span className="req">*</span></label>
+                <select value={newSession.group_id} onChange={e => setNewSession(p => ({ ...p, group_id: e.target.value }))}>
+                  <option value="">Tanlang</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Sana <span className="req">*</span></label>
+                <input type="date" value={newSession.session_date} onChange={e => setNewSession(p => ({ ...p, session_date: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Mavzu <span className="req">*</span></label>
+                <input value={newSession.topic} onChange={e => setNewSession(p => ({ ...p, topic: e.target.value }))} placeholder="Masalan: Tezlik mashqi" />
+              </div>
+              <div className="field">
+                <label>Maydon</label>
+                <input value={newSession.station} onChange={e => setNewSession(p => ({ ...p, station: e.target.value }))} placeholder="Maydon 1" />
+              </div>
+              <div className="field">
+                <label>Boshlanish vaqti</label>
+                <input type="time" value={newSession.start_time} onChange={e => setNewSession(p => ({ ...p, start_time: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Tugash vaqti</label>
+                <input type="time" value={newSession.end_time} onChange={e => setNewSession(p => ({ ...p, end_time: e.target.value }))} />
+              </div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Izoh</label>
+                <textarea value={newSession.description} onChange={e => setNewSession(p => ({ ...p, description: e.target.value }))} placeholder="Qo'shimcha izoh" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button className="btn ghost" onClick={() => setShowCreate(false)}>Bekor</button>
+              <button className="btn primary" onClick={handleCreateSession} disabled={saving}><I.Check size={14}/> {saving ? 'Saqlanmoqda...' : 'Yaratish'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
