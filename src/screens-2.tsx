@@ -5,7 +5,7 @@ import { MOCK } from './data';
 import {
   apiGetStudents, apiGetStudentFullInfo, apiGetStudentTransactions, apiGetStudentGateLogs,
   apiGetGroups, apiCreateStudent, apiGetStudentsComprehensiveExportUrl,
-  apiImportStudents, apiGetStudentAttendanceReport,
+  apiImportStudents, apiGetStudentAttendanceReport, apiUpdateStudent,
 } from './api';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -240,6 +240,10 @@ export function StudentProfile({ studentId, onBack }) {
   const [attendanceReport, setAttendanceReport] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [tab, setTab] = React.useState('overview');
+  const [showEditModal, setShowEditModal] = React.useState(false);
+  const [editForm, setEditForm] = React.useState({});
+  const [editLoading, setEditLoading] = React.useState(false);
+  const [editError, setEditError] = React.useState('');
 
   React.useEffect(() => {
     if (!studentId) return;
@@ -254,6 +258,22 @@ export function StudentProfile({ studentId, onBack }) {
       setTransactions(txRes?.data || []);
       setGateLogs(gateRes?.data || []);
       setAttendanceReport(reportRes?.data || null);
+      if (infoRes?.data?.student) {
+        const s = infoRes.data.student;
+        setEditForm({
+          first_name: s.first_name || '',
+          last_name: s.last_name || '',
+          date_of_birth: s.date_of_birth || '',
+          height: s.height || '',
+          weight: s.weight || '',
+          pnfl: s.pnfl || '',
+          phone: s.phone || '',
+          ampula: s.ampula || 'O(+)',
+          millati: s.millati || "O'zbek",
+          address: s.address || '',
+          group_id: infoRes.data.group?.id || '',
+        });
+      }
     }).catch(() => {}).finally(() => setLoading(false));
   }, [studentId]);
 
@@ -312,8 +332,8 @@ export function StudentProfile({ studentId, onBack }) {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button className="btn sm"><I.Edit size={13}/> Tahrirlash</button>
-              {contract && <button className="btn sm"><I.FileText size={13}/> Shartnoma</button>}
+              <button className="btn sm" onClick={() => setShowEditModal(true)}><I.Edit size={13}/> Tahrirlash</button>
+              {contract && <button className="btn sm" onClick={() => setTab('contract')}><I.FileText size={13}/> Shartnoma</button>}
               <button className="icon-btn" style={{ width: 32, height: 32 }}><I.More size={15}/></button>
             </div>
           </div>
@@ -530,6 +550,95 @@ export function StudentProfile({ studentId, onBack }) {
           </div>
         )}
       </div>
+
+      {showEditModal && info && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: 16
+        }} onClick={() => !editLoading && setShowEditModal(false)}>
+          <div style={{
+            background: 'var(--bg)', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            maxWidth: 500, width: '100%', padding: 24, maxHeight: '90vh', overflow: 'auto'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>O'quvchini tahrirlash</div>
+            {editError && <div style={{ background: 'var(--brand-red-soft)', color: 'var(--brand-red)', padding: 12, borderRadius: 6, marginBottom: 14, fontSize: 13 }}>{editError}</div>}
+            <div style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
+              {[
+                ['Ism', 'first_name'],
+                ['Familiya', 'last_name'],
+                ['Tug\'ilgan sana', 'date_of_birth'],
+                ['Bo\'yi (cm)', 'height'],
+                ['Vazni (kg)', 'weight'],
+                ['PNFL', 'pnfl'],
+                ['Telefon', 'phone'],
+                ['Manzil', 'address'],
+              ].map(([label, field]) => (
+                <div key={field}>
+                  <label style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>{label}</label>
+                  <input
+                    type={field === 'date_of_birth' ? 'date' : field === 'height' || field === 'weight' ? 'number' : 'text'}
+                    value={editForm[field] || ''}
+                    onChange={(e) => setEditForm(p => ({ ...p, [field]: e.target.value }))}
+                    disabled={editLoading}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
+                  />
+                </div>
+              ))}
+              <div>
+                <label style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>Qon guruhi</label>
+                <select
+                  value={editForm.ampula || 'O(+)'}
+                  onChange={(e) => setEditForm(p => ({ ...p, ampula: e.target.value }))}
+                  disabled={editLoading}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
+                >
+                  {['O(+)', 'O(-)', 'A(+)', 'A(-)', 'B(+)', 'B(-)', 'AB(+)', 'AB(-)'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn ghost" onClick={() => setShowEditModal(false)} disabled={editLoading}>Bekor</button>
+              <button className="btn primary" onClick={async () => {
+                setEditError('');
+                if (!editForm.first_name || !editForm.last_name || !editForm.date_of_birth || !editForm.pnfl) {
+                  setEditError('Ism, familiya, tug\'ilgan sana va PNFL majburiy');
+                  return;
+                }
+                setEditLoading(true);
+                try {
+                  const fd = new FormData();
+                  ['first_name', 'last_name', 'date_of_birth', 'height', 'weight', 'pnfl', 'phone', 'ampula', 'millati', 'address'].forEach(k => {
+                    if (editForm[k]) fd.append(k, editForm[k]);
+                  });
+                  await apiUpdateStudent(studentId, fd);
+                  setShowEditModal(false);
+                  setLoading(true);
+                  const infoRes = await apiGetStudentFullInfo(studentId);
+                  setInfo(infoRes?.data || null);
+                  setEditForm({
+                    first_name: infoRes.data.student.first_name,
+                    last_name: infoRes.data.student.last_name,
+                    date_of_birth: infoRes.data.student.date_of_birth,
+                    height: infoRes.data.student.height,
+                    weight: infoRes.data.student.weight,
+                    pnfl: infoRes.data.student.pnfl,
+                    phone: infoRes.data.student.phone,
+                    ampula: infoRes.data.student.ampula,
+                    millati: infoRes.data.student.millati,
+                    address: infoRes.data.student.address,
+                  });
+                  setLoading(false);
+                } catch (e) {
+                  setEditError(e.message || 'Xatolik yuz berdi');
+                } finally {
+                  setEditLoading(false);
+                }
+              }} disabled={editLoading}>{editLoading ? 'Saqlanamoqda...' : 'Saqlash'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
