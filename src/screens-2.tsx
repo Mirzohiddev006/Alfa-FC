@@ -37,6 +37,7 @@ export function StudentsList({ onOpen, onNew }) {
   const [importFile, setImportFile] = React.useState(null);
   const [importing, setImporting] = React.useState(false);
   const [openMenuStudentId, setOpenMenuStudentId] = React.useState(null);
+  const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
   const PAGE_SIZE = 30;
 
   React.useEffect(() => {
@@ -47,6 +48,12 @@ export function StudentsList({ onOpen, onNew }) {
       setStudents(sRes?.data || []);
       setGroups(gRes?.data || []);
     }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    const closeMenu = () => setOpenMenuStudentId(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
   }, []);
 
   const groupMap = React.useMemo(() => {
@@ -186,10 +193,19 @@ export function StudentsList({ onOpen, onNew }) {
                       {s.status === 'archived' && <span className="chip"><span className="chip-dot"></span>Arxiv</span>}
                     </td>
                     <td onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
-                      <button className="icon-btn" style={{ width: 32, height: 32, border: 'none', background: 'transparent' }} onClick={() => setOpenMenuStudentId(openMenuStudentId === s.id ? null : s.id)}><I.More size={16}/></button>
+                      <button className="icon-btn" style={{ width: 32, height: 32, border: 'none', background: 'transparent' }} onClick={(e) => {
+                        e.stopPropagation();
+                        if (openMenuStudentId === s.id) {
+                          setOpenMenuStudentId(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMenuPos({ x: rect.right - 140, y: rect.bottom + 4 });
+                          setOpenMenuStudentId(s.id);
+                        }
+                      }}><I.More size={16}/></button>
                       {openMenuStudentId === s.id && (
-                        <div style={{ position: 'absolute', top: 32, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
-                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => { onOpen(s.id); setOpenMenuStudentId(null); }}>
+                        <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 140, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
+                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpen(s.id); setOpenMenuStudentId(null); }}>
                             <I.Eye size={14} /> Ochish
                           </button>
                         </div>

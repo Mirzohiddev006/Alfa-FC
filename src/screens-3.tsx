@@ -32,6 +32,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
   const [groupStudents, setGroupStudents] = React.useState([]);
   const [groupLoading, setGroupLoading] = React.useState(false);
   const [openMenuGroupId, setOpenMenuGroupId] = React.useState(null);
+  const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
 
   async function loadData() {
     setLoading(true);
@@ -50,6 +51,12 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
   }
 
   React.useEffect(() => { loadData(); }, []);
+
+  React.useEffect(() => {
+    const closeMenu = () => setOpenMenuGroupId(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
 
   React.useEffect(() => {
     if (!selectedGroupId) {
@@ -229,9 +236,18 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                     <td style={{ fontVariantNumeric: 'tabular-nums' }}>{g.active_students_count ?? '—'}</td>
                     <td><span className="chip success">Faol</span></td>
                     <td style={{ position: 'relative' }}>
-                      <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => { e.stopPropagation(); setOpenMenuGroupId(openMenuGroupId === g.id ? null : g.id); }}><I.More size={15}/></button>
+                      <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
+                        e.stopPropagation();
+                        if (openMenuGroupId === g.id) {
+                          setOpenMenuGroupId(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMenuPos({ x: rect.right - 140, y: rect.bottom + 4 });
+                          setOpenMenuGroupId(g.id);
+                        }
+                      }}><I.More size={15}/></button>
                       {openMenuGroupId === g.id && (
-                        <div style={{ position: 'absolute', top: 28, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
+                        <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 140, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
                           <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpen?.(g.id); setOpenMenuGroupId(null); }}>
                             <I.Eye size={14} /> Ko'rish
                           </button>

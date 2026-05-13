@@ -69,12 +69,19 @@ export function ContractsScreen({ onOpenContract }) {
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [openMenuContractId, setOpenMenuContractId] = React.useState(null);
+  const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
 
   React.useEffect(() => {
     apiGetContracts({ page_size: 200 })
       .then((res) => setContracts(res?.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    const closeMenu = () => setOpenMenuContractId(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
   }, []);
 
   const rows = contracts.filter((c) => {
@@ -151,9 +158,18 @@ export function ContractsScreen({ onOpenContract }) {
                   {c.status === 'finished' && <span className="chip warning"><span className="chip-dot"></span>Tugagan</span>}
                 </td>
                 <td style={{ position: 'relative' }}>
-                  <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => { e.stopPropagation(); setOpenMenuContractId(openMenuContractId === c.id ? null : c.id); }}><I.More size={15} /></button>
+                  <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
+                    e.stopPropagation();
+                    if (openMenuContractId === c.id) {
+                      setOpenMenuContractId(null);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setMenuPos({ x: rect.right - 140, y: rect.bottom + 4 });
+                      setOpenMenuContractId(c.id);
+                    }
+                  }}><I.More size={15} /></button>
                   {openMenuContractId === c.id && (
-                    <div style={{ position: 'absolute', top: 28, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
+                    <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 140, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
                       <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpenContract?.(c.id); setOpenMenuContractId(null); }}>
                         <I.Eye size={14} /> Ko'rish
                       </button>
@@ -357,6 +373,8 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
   const [newRole, setNewRole] = React.useState({ name: '', display_name: '', permissions: [] });
   const [openMenuUserId, setOpenMenuUserId] = React.useState(null);
   const [deletingUserId, setDeletingUserId] = React.useState(null);
+  const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
+  const menuButtonRef = React.useRef(null);
 
   const PERMS = ['students.read', 'students.write', 'groups.read', 'groups.write', 'payments.read', 'payments.write', 'users.read', 'users.write', 'settings.write'];
 
@@ -373,6 +391,12 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
   }
 
   React.useEffect(() => { load(); }, []);
+
+  React.useEffect(() => {
+    const closeMenu = () => setOpenMenuUserId(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
 
   async function createRole() {
     if (!newRole.name || !newRole.display_name) return;
@@ -433,11 +457,20 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
                   <td>{u.username}</td>
                   <td><span className="chip navy">{u.role_name || '—'}</span></td>
                   <td>{u.is_active ? <span className="chip success">Faol</span> : <span className="chip">Nofaol</span>}</td>
-                  <td style={{ position: 'relative' }}>
-                    <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => { e.stopPropagation(); setOpenMenuUserId(openMenuUserId === u.id ? null : u.id); }}><I.More size={15} /></button>
+                  <td style={{ position: 'relative', overflow: 'visible' }} ref={openMenuUserId === u.id ? menuButtonRef : null}>
+                    <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
+                      e.stopPropagation();
+                      if (openMenuUserId === u.id) {
+                        setOpenMenuUserId(null);
+                      } else {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMenuPos({ x: rect.right - 140, y: rect.bottom + 4 });
+                        setOpenMenuUserId(u.id);
+                      }
+                    }}><I.More size={15} /></button>
                     {openMenuUserId === u.id && (
-                      <div style={{ position: 'absolute', top: 28, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 10, minWidth: 140 }}>
-                        <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => deleteUser(u.id)} disabled={deletingUserId === u.id}>
+                      <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 140, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
+                        <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => deleteUser(u.id)} disabled={deletingUserId === u.id}>
                           <I.Trash2 size={14} /> {deletingUserId === u.id ? 'O\'chirilmoqda...' : "O'chirish"}
                         </button>
                       </div>
