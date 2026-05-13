@@ -325,12 +325,12 @@ export function GateLogsScreen() {
 export const GateScreen = GateLogsScreen;
 
 // Users
-export function UsersScreen() {
+export function UsersScreen({ initialView = 'users', onToast } = {}) {
   const I = Icon;
   const [users, setUsers] = React.useState([]);
   const [roles, setRoles] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [tab, setTab] = React.useState('users');
+  const [tab, setTab] = React.useState(initialView);
   const [newRole, setNewRole] = React.useState({ name: '', display_name: '', permissions: [] });
 
   const PERMS = ['students.read', 'students.write', 'groups.read', 'groups.write', 'payments.read', 'payments.write', 'users.read', 'users.write', 'settings.write'];
@@ -471,7 +471,7 @@ export function UsersScreen() {
 }
 
 // Settings
-export function SettingsScreen() {
+export function SettingsScreen({ theme, setTheme } = {}) {
   const I = Icon;
   const [settings, setSettings] = React.useState({});
   const [loading, setLoading] = React.useState(true);
@@ -597,7 +597,7 @@ export function SettingsScreen() {
 }
 
 // Transactions
-export function TransactionsScreen() {
+export function TransactionsScreen({ onToast } = {}) {
   const I = Icon;
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -740,7 +740,7 @@ export function ReportsScreen() {
 }
 
 // Waiting list
-export function WaitingListScreen() {
+export function WaitingListScreen({ onToast } = {}) {
   const I = Icon;
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -783,8 +783,13 @@ export function WaitingListScreen() {
 
   async function save() {
     if (!form.first_name || !form.last_name || !form.phone) return;
-    if (editing) await apiUpdateWaitingList(editing.id, form);
-    else await apiCreateWaitingList(form);
+    try {
+      if (editing) await apiUpdateWaitingList(editing.id, form);
+      else await apiCreateWaitingList(form);
+      onToast?.(editing ? 'Nomzod o\'zgartirildi' : 'Nomzod qo\'shildi');
+    } catch (e) {
+      onToast?.('Xatolik: ' + e.message);
+    }
     setShowModal(false);
     load();
   }

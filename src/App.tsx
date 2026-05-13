@@ -6,7 +6,7 @@ import { Sidebar, Topbar } from './shell';
 import { LoginScreen, Dashboard } from './screens-1';
 import { StudentsList, StudentProfile, StudentNew } from './screens-2';
 import { GroupsScreen, SessionsScreen, AttendanceMark, PerformanceTable } from './screens-3';
-import { ContractsScreen, GateScreen, UsersScreen, SettingsScreen, TransactionsScreen, ReportsScreen, WaitingListScreen } from './screens-4';
+import { ContractsScreen, ContractView, GateScreen, UsersScreen, SettingsScreen, TransactionsScreen, ReportsScreen, WaitingListScreen } from './screens-4';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor } from './tweaks-panel';
 import { apiGetMe, apiLogout, getToken, setUnauthorizedHandler } from './api';
 
@@ -28,6 +28,7 @@ export default function App() {
   const [studentId, setStudentId] = React.useState(null);
   const [sessionId, setSessionId] = React.useState(null);
   const [groupId, setGroupId] = React.useState(null);
+  const [contractId, setContractId] = React.useState(null);
   const [navCollapsed, setNavCollapsed] = React.useState(false);
   const [toast, setToast] = React.useState(null);
 
@@ -110,6 +111,7 @@ export default function App() {
   if (route === 'attendance-mark') { crumbs.push('Sessiyalar'); crumbs.push('Davomat'); activeNav = 'sessions'; }
   if (route === 'performance') crumbs.push('Natijaviy jadval');
   if (route === 'contracts') crumbs.push('Shartnomalar');
+  if (route === 'contracts-view') { crumbs.push('Shartnomalar'); crumbs.push('Ko\'rish'); activeNav = 'contracts'; }
   if (route === 'transactions') crumbs.push('Tranzaksiyalar');
   if (route === 'gate') crumbs.push('Darvoza loglari');
   if (route === 'users') crumbs.push('Foydalanuvchilar');
@@ -148,7 +150,8 @@ export default function App() {
           {route === 'sessions' && <SessionsScreen onMark={(id) => { setSessionId(id); setRoute('attendance-mark'); }}/>} 
           {route === 'attendance-mark' && <AttendanceMark sessionId={sessionId} onBack={() => navigate('sessions')}/>} 
           {route === 'performance' && <PerformanceTable/>} 
-          {route === 'contracts' && <ContractsScreen/>} 
+          {route === 'contracts' && <ContractsScreen onOpenContract={(id) => { setContractId(id); setRoute('contracts-view'); }}/>} 
+          {route === 'contracts-view' && <ContractView contractId={contractId} onBack={() => navigate('contracts')}/>} 
           {route === 'transactions' && <TransactionsScreen onToast={showToast}/>} 
           {route === 'gate' && <GateScreen/>} 
           {(route === 'users' || route === 'roles') && (
