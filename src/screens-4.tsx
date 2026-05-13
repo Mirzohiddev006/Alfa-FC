@@ -8,6 +8,7 @@ import {
   apiGetContractPdf,
   apiRegenerateContractPdf,
   apiGetGateLogs,
+  apiGetGroups,
   apiGetUsers,
   apiGetRoles,
   apiCreateRole,
@@ -752,15 +753,32 @@ export function ReportsScreen() {
 export function WaitingListScreen({ onToast } = {}) {
   const I = Icon;
   const [rows, setRows] = React.useState([]);
+  const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showModal, setShowModal] = React.useState(false);
   const [editing, setEditing] = React.useState(null);
-  const [form, setForm] = React.useState({ first_name: '', last_name: '', phone: '', date_of_birth: '', preferred_position: '', notes: '', status: 'new' });
+  const [form, setForm] = React.useState({
+    student_first_name: '',
+    student_last_name: '',
+    birth_year: '',
+    father_name: '',
+    father_phone: '',
+    mother_name: '',
+    mother_phone: '',
+    group_id: '',
+    priority: 0,
+    notes: '',
+  });
 
   async function load() {
     setLoading(true);
     try {
-      const res = await apiGetWaitingList({ page_size: 200 });
+      const [wRes, gRes] = await Promise.all([
+        apiGetWaitingList({ page_size: 100 }),
+        apiGetGroups({ page_size: 100 }),
+      ]);
+      setGroups(gRes?.data || []);
+      const res = wRes;
       setRows(res?.data || []);
     } catch {
     } finally {
@@ -772,29 +790,55 @@ export function WaitingListScreen({ onToast } = {}) {
 
   function openNew() {
     setEditing(null);
-    setForm({ first_name: '', last_name: '', phone: '', date_of_birth: '', preferred_position: '', notes: '', status: 'new' });
+    setForm({
+      student_first_name: '',
+      student_last_name: '',
+      birth_year: '',
+      father_name: '',
+      father_phone: '',
+      mother_name: '',
+      mother_phone: '',
+      group_id: '',
+      priority: 0,
+      notes: '',
+    });
     setShowModal(true);
   }
 
   function openEdit(r) {
     setEditing(r);
     setForm({
-      first_name: r.first_name || '',
-      last_name: r.last_name || '',
-      phone: r.phone || '',
-      date_of_birth: r.date_of_birth || '',
-      preferred_position: r.preferred_position || '',
+      student_first_name: r.student_first_name || '',
+      student_last_name: r.student_last_name || '',
+      birth_year: r.birth_year || '',
+      father_name: r.father_name || '',
+      father_phone: r.father_phone || '',
+      mother_name: r.mother_name || '',
+      mother_phone: r.mother_phone || '',
+      group_id: r.group_id || '',
+      priority: r.priority ?? 0,
       notes: r.notes || '',
-      status: r.status || 'new',
     });
     setShowModal(true);
   }
 
   async function save() {
-    if (!form.first_name || !form.last_name || !form.phone) return;
+    if (!form.student_first_name || !form.student_last_name || !form.birth_year) return;
     try {
-      if (editing) await apiUpdateWaitingList(editing.id, form);
-      else await apiCreateWaitingList(form);
+      const payload = {
+        student_first_name: form.student_first_name,
+        student_last_name: form.student_last_name,
+        birth_year: Number(form.birth_year),
+        father_name: form.father_name || undefined,
+        father_phone: form.father_phone || undefined,
+        mother_name: form.mother_name || undefined,
+        mother_phone: form.mother_phone || undefined,
+        group_id: form.group_id ? Number(form.group_id) : undefined,
+        priority: Number(form.priority || 0),
+        notes: form.notes || undefined,
+      };
+      if (editing) await apiUpdateWaitingList(editing.id, payload);
+      else await apiCreateWaitingList(payload);
       onToast?.(editing ? 'Nomzod o\'zgartirildi' : 'Nomzod qo\'shildi');
     } catch (e) {
       onToast?.('Xatolik: ' + e.message);
@@ -809,11 +853,13 @@ export function WaitingListScreen({ onToast } = {}) {
     load();
   }
 
-  const byStatus = {
-    new: rows.filter((r) => r.status === 'new').length,
-    contacted: rows.filter((r) => r.status === 'contacted').length,
-    accepted: rows.filter((r) => r.status === 'accepted').length,
-    rejected: rows.filter((r) => r.status === 'rejected').length,
+  const byPriority = {
+    high: rows.filter((r) => Number(r.priority || 0) >= 8).length,
+    medium: rows.filter((r) => {
+      const p = Number(r.priority || 0);
+      return p >= 4 && p < 8;
+    }).length,
+    low: rows.filter((r) => Number(r.priority || 0) < 4).length,
   };
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
@@ -831,28 +877,27 @@ export function WaitingListScreen({ onToast } = {}) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
-        <Stat label="Yangi" value={byStatus.new} tone="navy" />
-        <Stat label="Bog'langan" value={byStatus.contacted} tone="warning" />
-        <Stat label="Qabul qilingan" value={byStatus.accepted} tone="success" />
-        <Stat label="Rad etilgan" value={byStatus.rejected} tone="danger" />
+        <Stat label="Jami" value={rows.length} tone="navy" />
+        <Stat label="Yuqori prioritet" value={byPriority.high} tone="warning" />
+        <Stat label="O'rta prioritet" value={byPriority.medium} tone="success" />
+        <Stat label="Past prioritet" value={byPriority.low} tone="danger" />
       </div>
 
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th>F.I.O.</th><th>Telefon</th><th>Tug'ilgan sana</th><th>Pozitsiya</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>O'quvchi</th><th>Ota-ona</th><th>Tug'ilgan yil</th><th>Guruh</th><th>Prioritet</th><th>Izoh</th><th></th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
-                <td style={{ fontWeight: 600 }}>{r.first_name} {r.last_name}</td>
-                <td>{r.phone}</td>
-                <td>{r.date_of_birth || '—'}</td>
-                <td>{r.preferred_position || '—'}</td>
-                <td>
-                  {r.status === 'new' && <span className="chip">Yangi</span>}
-                  {r.status === 'contacted' && <span className="chip warning">Bog'langan</span>}
-                  {r.status === 'accepted' && <span className="chip success">Qabul</span>}
-                  {r.status === 'rejected' && <span className="chip">Rad</span>}
+                <td style={{ fontWeight: 600 }}>{r.student_first_name} {r.student_last_name}</td>
+                <td style={{ fontSize: 12.5 }}>
+                  <div>{r.father_name || '—'} / {r.father_phone || '—'}</div>
+                  <div style={{ color: 'var(--muted)' }}>{r.mother_name || '—'} / {r.mother_phone || '—'}</div>
                 </td>
+                <td>{r.birth_year || '—'}</td>
+                <td>{groups.find(g => g.id === r.group_id)?.name || r.group_id || '—'}</td>
+                <td><span className="chip navy">{r.priority ?? 0}</span></td>
+                <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{r.notes || '—'}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => openEdit(r)}><I.Edit size={14} /></button>
@@ -873,20 +918,20 @@ export function WaitingListScreen({ onToast } = {}) {
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setShowModal(false)}><I.X size={15} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div className="field"><label>Ism</label><input value={form.first_name} onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))} /></div>
-              <div className="field"><label>Familiya</label><input value={form.last_name} onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))} /></div>
-              <div className="field"><label>Telefon</label><input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} /></div>
-              <div className="field"><label>Tug'ilgan sana</label><input type="date" value={form.date_of_birth} onChange={(e) => setForm((p) => ({ ...p, date_of_birth: e.target.value }))} /></div>
-              <div className="field"><label>Pozitsiya</label><input value={form.preferred_position} onChange={(e) => setForm((p) => ({ ...p, preferred_position: e.target.value }))} /></div>
-              <div className="field">
-                <label>Status</label>
-                <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}>
-                  <option value="new">Yangi</option>
-                  <option value="contacted">Bog'langan</option>
-                  <option value="accepted">Qabul</option>
-                  <option value="rejected">Rad</option>
+              <div className="field"><label>O'quvchi ismi</label><input value={form.student_first_name} onChange={(e) => setForm((p) => ({ ...p, student_first_name: e.target.value }))} /></div>
+              <div className="field"><label>O'quvchi familiyasi</label><input value={form.student_last_name} onChange={(e) => setForm((p) => ({ ...p, student_last_name: e.target.value }))} /></div>
+              <div className="field"><label>Tug'ilgan yil</label><input type="number" value={form.birth_year} onChange={(e) => setForm((p) => ({ ...p, birth_year: e.target.value }))} /></div>
+              <div className="field"><label>Guruh</label>
+                <select value={form.group_id} onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}>
+                  <option value="">Tanlanmagan</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </div>
+              <div className="field"><label>Ota ismi</label><input value={form.father_name} onChange={(e) => setForm((p) => ({ ...p, father_name: e.target.value }))} /></div>
+              <div className="field"><label>Ota telefoni</label><input value={form.father_phone} onChange={(e) => setForm((p) => ({ ...p, father_phone: e.target.value }))} /></div>
+              <div className="field"><label>Ona ismi</label><input value={form.mother_name} onChange={(e) => setForm((p) => ({ ...p, mother_name: e.target.value }))} /></div>
+              <div className="field"><label>Ona telefoni</label><input value={form.mother_phone} onChange={(e) => setForm((p) => ({ ...p, mother_phone: e.target.value }))} /></div>
+              <div className="field"><label>Prioritet</label><input type="number" value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} /></div>
               <div className="field" style={{ gridColumn: 'span 2' }}><label>Izoh</label><textarea rows={3} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} /></div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>

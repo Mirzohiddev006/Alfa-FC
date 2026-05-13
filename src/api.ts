@@ -26,6 +26,34 @@ function normalizeContractDatesPayload(data = {}) {
   };
 }
 
+function clampPageSize(pageSize, max) {
+  if (pageSize === undefined || pageSize === null || pageSize === '') return undefined;
+  const n = Number(pageSize);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.min(n, max);
+}
+
+function buildQuery(params = {}, allowedKeys = [], aliases = {}, pageSizeMax) {
+  const query = {};
+
+  allowedKeys.forEach((key) => {
+    const value = params[key];
+    if (value !== undefined && value !== null && value !== '') query[key] = value;
+  });
+
+  Object.entries(aliases).forEach(([from, to]) => {
+    const value = params[from];
+    if (value !== undefined && value !== null && value !== '') query[to] = value;
+  });
+
+  if (pageSizeMax) {
+    const pageSize = clampPageSize(params.page_size, pageSizeMax);
+    if (pageSize !== undefined) query.page_size = pageSize;
+  }
+
+  return new URLSearchParams(query).toString();
+}
+
 export function getToken() { return localStorage.getItem(TOKEN_KEY); }
 export function setTokens(access, refresh) {
   localStorage.setItem(TOKEN_KEY, access);
@@ -89,7 +117,7 @@ export function apiLogout() { clearTokens(); }
 
 // Users
 export async function apiGetUsers(params = {}) {
-  const q = new URLSearchParams(params).toString();
+  const q = buildQuery(params, ['page'], {}, 100);
   return apiFetch(`/users${q ? '?' + q : ''}`);
 }
 
@@ -252,7 +280,7 @@ export async function apiGetGroupStudentsExportUrl(id) {
 
 // Sessions
 export async function apiGetSessions(params = {}) {
-  const q = new URLSearchParams(params).toString();
+  const q = buildQuery(params, ['date', 'from_date', 'to_date', 'group_id'], { session_date: 'date' });
   return apiFetch(`/head-coach/sessions${q ? '?' + q : ''}`);
 }
 
@@ -278,7 +306,7 @@ export async function apiGetSessionDetails(id) {
 
 // Attendance (coach)
 export async function apiGetCoachSessions(params = {}) {
-  const q = new URLSearchParams(params).toString();
+  const q = buildQuery(params, ['date', 'from_date', 'to_date', 'group_id'], { session_date: 'date' });
   return apiFetch(`/coach/sessions${q ? '?' + q : ''}`);
 }
 
@@ -439,7 +467,7 @@ export async function apiDeleteTransactionsBulk(ids) {
 
 // Gate
 export async function apiGetGateLogs(params = {}) {
-  const q = new URLSearchParams(params).toString();
+  const q = buildQuery(params, ['student_id', 'from_date', 'to_date', 'page', 'allowed'], {}, 100);
   return apiFetch(`/gate/logs${q ? '?' + q : ''}`);
 }
 
@@ -509,7 +537,7 @@ export async function apiUpdateSettings(data) {
 
 // Waiting List
 export async function apiGetWaitingList(params = {}) {
-  const q = new URLSearchParams(params).toString();
+  const q = buildQuery(params, ['group_id', 'birth_year', 'page'], {}, 100);
   return apiFetch(`/waiting-list${q ? '?' + q : ''}`);
 }
 

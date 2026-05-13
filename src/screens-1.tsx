@@ -150,7 +150,7 @@ export function Dashboard({ role, onNav }) {
   React.useEffect(() => {
     Promise.all([
       apiGetDashboard(),
-      apiGetSessions({ session_date: todayIso }),
+      apiGetSessions({ date: todayIso }),
       apiGetGroups({ page_size: 50 }),
     ]).then(([dashRes, sessRes, grpRes]) => {
       setSummary(dashRes?.data || null);

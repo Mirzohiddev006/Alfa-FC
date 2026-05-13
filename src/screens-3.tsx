@@ -298,7 +298,7 @@ export function SessionsScreen({ onMark }) {
 
   React.useEffect(() => {
     Promise.all([
-      apiGetSessions({ page_size: 100 }),
+      apiGetSessions(),
       apiGetGroups({ page_size: 100 }),
     ]).then(([sRes, gRes]) => {
       setSessions(sRes?.data || []);
@@ -355,7 +355,7 @@ export function SessionsScreen({ onMark }) {
       });
       setShowCreate(false);
       setNewSession((p) => ({ ...p, topic: '', station: '', description: '' }));
-      const [sRes] = await Promise.all([apiGetSessions({ page_size: 100 })]);
+      const [sRes] = await Promise.all([apiGetSessions()]);
       setSessions(sRes?.data || []);
     } catch (e) {
       alert('Sessiya yaratilmadi: ' + e.message);
