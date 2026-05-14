@@ -768,17 +768,46 @@ export function TransactionsScreen({ onToast } = {}) {
 
   async function openDetail(id) {
     setDetailLoading(true);
+    setDetail({ id });
     try {
       const res = await apiGetTransaction(id);
       setDetail(res?.data || null);
     } catch (e) {
+      setDetail(null);
       alert('Tranzaksiya ochilmadi: ' + e.message);
     } finally {
       setDetailLoading(false);
     }
   }
 
-  const list = rows.filter((r) => source === 'all' ? true : r.source === source);
+  function normSource(v) {
+    const s = String(v || '').trim().toLowerCase();
+    if (!s) return 'unknown';
+    if (s === 'cash') return 'cash';
+    if (s === 'click' || s === 'click_up') return 'click';
+    if (s === 'payme') return 'payme';
+    if (s === 'terminal' || s === 'card' || s === 'uzcard' || s === 'humo') return 'terminal';
+    return s;
+  }
+
+  function sourceLabel(v) {
+    const s = normSource(v);
+    if (s === 'cash') return 'Naqd';
+    if (s === 'click') return 'Click';
+    if (s === 'payme') return 'Payme';
+    if (s === 'terminal') return 'Terminal';
+    return String(v || '—');
+  }
+
+  function statusLabel(v) {
+    const s = String(v || '').trim().toUpperCase();
+    if (s === 'SETTLED' || s === 'PAID' || s === 'SUCCESS') return { cls: 'success', text: "To'langan" };
+    if (s === 'UNASSIGNED' || s === 'PENDING') return { cls: 'warning', text: 'Biriktirilmagan' };
+    if (s === 'CANCELLED' || s === 'FAILED') return { cls: '', text: 'Bekor' };
+    return { cls: '', text: v || '—' };
+  }
+
+  const list = rows.filter((r) => source === 'all' ? true : normSource(r.source) === source);
   const total = list.reduce((s, r) => s + (r.amount || 0), 0);
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
@@ -810,14 +839,13 @@ export function TransactionsScreen({ onToast } = {}) {
               <tr key={t.id} onClick={() => openDetail(t.id)} style={{ cursor: 'pointer' }}>
                 <td style={{ fontVariantNumeric: 'tabular-nums' }}>{(t.paid_at || '').slice(0, 10)}</td>
                 <td>{t.student_name || `#${t.student_id}`}</td>
-                <td><span className="chip">{t.source}</span></td>
+                <td><span className="chip">{sourceLabel(t.source)}</span></td>
                 <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{(t.payment_months || []).join(', ') || '—'}</td>
                 <td style={{ textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmt.format(t.amount || 0)} so'm</td>
-                <td>
-                  {t.status === 'SETTLED' && <span className="chip success">To'langan</span>}
-                  {t.status === 'UNASSIGNED' && <span className="chip warning">Biriktirilmagan</span>}
-                  {t.status === 'CANCELLED' && <span className="chip">Bekor</span>}
-                </td>
+                <td>{(() => {
+                  const st = statusLabel(t.status);
+                  return <span className={'chip' + (st.cls ? ` ${st.cls}` : '')}>{st.text}</span>;
+                })()}</td>
               </tr>
             ))}
           </tbody>
