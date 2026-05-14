@@ -307,7 +307,7 @@ export function SessionsScreen({ onMark }) {
   const [sessions, setSessions] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [filter, setFilter] = React.useState('today');
+  const [filter, setFilter] = React.useState('all');
   const [selectedDate, setSelectedDate] = React.useState('');
   const [showCreate, setShowCreate] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -459,6 +459,15 @@ export function SessionsScreen({ onMark }) {
         <table className="table">
           <thead><tr><th>Sana</th><th>Vaqt</th><th>Mavzu</th><th>Guruh</th><th>Maydon</th><th>Status</th><th></th></tr></thead>
           <tbody>
+            {list.length === 0 && (
+              <tr>
+                <td colSpan="7">
+                  <div className="empty" style={{ padding: 32 }}>
+                    Sessiyalar topilmadi. Boshqa filtrni tanlang yoki yangi sessiya rejalashtiring.
+                  </div>
+                </td>
+              </tr>
+            )}
             {list.slice(0, 20).map(s => (
               <tr key={s.id} onClick={() => onMark(s.id)}>
                 <td style={{ fontVariantNumeric: 'tabular-nums' }}>{s.session_date}</td>
