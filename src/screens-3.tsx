@@ -342,6 +342,14 @@ export function SessionsScreen({ onMark }) {
 
   const list = sessionsWithStatus.filter(s => {
     if (filter === 'all') return true;
+    if (filter === 'week') {
+      const d = new Date(s.session_date);
+      const start = new Date(today);
+      start.setDate(start.getDate() - 3);
+      const end = new Date(today);
+      end.setDate(end.getDate() + 3);
+      return d >= start && d <= end;
+    }
     if (filter === 'today') return s._status === 'today';
     if (filter === 'upcoming') return s._status === 'upcoming';
     if (filter === 'past') return s._status === 'completed';
@@ -398,7 +406,9 @@ export function SessionsScreen({ onMark }) {
           <div className="page-sub">{sessions.length} ta sessiya · {sessions.filter(s => sessionStatus(s.session_date) === 'upcoming').length} ta kelayotgan</div>
         </div>
         <div className="page-actions">
-          <button className="btn"><I.Calendar size={15}/> Hafta</button>
+          <button className={'btn' + (filter === 'week' ? ' primary' : '')} onClick={() => setFilter('week')}>
+            <I.Calendar size={15}/> Hafta
+          </button>
           <button className="btn primary" onClick={() => setShowCreate(true)}><I.Plus size={15}/> Sessiya rejalashtirish</button>
         </div>
       </div>

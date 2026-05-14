@@ -20,9 +20,12 @@ import {
   apiGetTransactions,
   apiGetTransactionsWithName,
   apiGetTransaction,
+  apiGetUnassignedTransactions,
+  apiGetTransactionStats,
   apiGetReportsSummary,
   apiGetReportsRevenueDynamics,
   apiGetReportsPaymentsBySource,
+  apiGetReportsTerminatedSummary,
   apiGetAttendanceGroupsReport,
   apiDebtorsExportUrl,
   apiPayersExportUrl,
@@ -755,12 +758,28 @@ export function TransactionsScreen({ onToast } = {}) {
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [source, setSource] = React.useState('all');
+  const [scope, setScope] = React.useState('all');
+  const [stats, setStats] = React.useState(null);
   const [detail, setDetail] = React.useState(null);
   const [detailLoading, setDetailLoading] = React.useState(false);
 
   React.useEffect(() => {
-    apiGetTransactionsWithName({ page_size: 200 }).then((res) => setRows(res?.data || [])).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    const loadRows = scope === 'unassigned'
+      ? apiGetUnassignedTransactions({ page_size: 200 })
+      : apiGetTransactionsWithName({ page_size: 200 });
+
+    Promise.all([
+      loadRows,
+      apiGetTransactionStats(),
+    ])
+      .then(([rowsRes, statsRes]) => {
+        setRows(rowsRes?.data || []);
+        setStats(statsRes?.data || null);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [scope]);
 
   function handleExport() {
     window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
@@ -820,6 +839,10 @@ export function TransactionsScreen({ onToast } = {}) {
           <div className="page-sub">{list.length} ta tranzaksiya · {fmt.format(total)} so'm</div>
         </div>
         <div className="page-actions">
+          <select value={scope} onChange={(e) => setScope(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
+            <option value="all">Barcha to'lovlar</option>
+            <option value="unassigned">Biriktirilmagan</option>
+          </select>
           <select value={source} onChange={(e) => setSource(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             <option value="all">Barchasi</option>
             <option value="cash">Naqd</option>
@@ -830,6 +853,27 @@ export function TransactionsScreen({ onToast } = {}) {
           <button className="btn" onClick={handleExport}><I.Download size={15} /> Export</button>
         </div>
       </div>
+
+      {stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
+          <div className="stat" style={{ padding: 14 }}>
+            <div className="stat-label">Jami to'lov</div>
+            <div className="stat-value" style={{ fontSize: 22 }}>{fmt.format(stats.total_paid || 0)}</div>
+          </div>
+          <div className="stat" style={{ padding: 14 }}>
+            <div className="stat-label">Muvaffaqiyatli</div>
+            <div className="stat-value" style={{ fontSize: 22 }}>{stats.successful_transactions || 0}</div>
+          </div>
+          <div className="stat" style={{ padding: 14 }}>
+            <div className="stat-label">Click / Payme</div>
+            <div className="stat-value" style={{ fontSize: 22 }}>{(stats.click_transactions || 0) + (stats.payme_transactions || 0)}</div>
+          </div>
+          <div className="stat" style={{ padding: 14 }}>
+            <div className="stat-label">Bank</div>
+            <div className="stat-value" style={{ fontSize: 22 }}>{stats.bank_transactions || 0}</div>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrap">
         <table className="table">
@@ -894,6 +938,7 @@ export function ReportsScreen() {
   const [dyn, setDyn] = React.useState([]);
   const [bySource, setBySource] = React.useState([]);
   const [attendanceGroups, setAttendanceGroups] = React.useState([]);
+  const [terminatedSummary, setTerminatedSummary] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -902,12 +947,14 @@ export function ReportsScreen() {
       apiGetReportsRevenueDynamics('month'),
       apiGetReportsPaymentsBySource(),
       apiGetAttendanceGroupsReport(),
+      apiGetReportsTerminatedSummary(),
     ])
-      .then(([s, d, p, a]) => {
+      .then(([s, d, p, a, t]) => {
         setSummary(s || null);
         setDyn(d || []);
         setBySource(p || []);
         setAttendanceGroups(a?.data || []);
+        setTerminatedSummary(t?.data || null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -1006,6 +1053,18 @@ export function ReportsScreen() {
           </div>
         )}
       </div>
+
+      {terminatedSummary && (
+        <div className="card" style={{ marginTop: 14, padding: 16 }}>
+          <div className="card-title" style={{ marginBottom: 12 }}>Bekor qilingan shartnomalar xulosasi</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <Stat label="Bekor qilingan" value={terminatedSummary.terminated_count || 0} icon={I.XCircle} />
+            <Stat label="Jami kutilgan" value={fmt.format(terminatedSummary.total_expected || 0)} tone="navy" icon={I.FileText} />
+            <Stat label="Jami to'langan" value={fmt.format(terminatedSummary.total_paid || 0)} tone="success" icon={I.Check} />
+            <Stat label="Jami qarz" value={fmt.format(terminatedSummary.total_debt || 0)} tone="danger" icon={I.AlertTriangle} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
