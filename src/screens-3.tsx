@@ -8,6 +8,7 @@ import {
   apiGetCoaches, apiGetGroupStudentsExportUrl, apiDownloadCoachGroupPerformanceTableExport,
   apiMarkAttendance, apiMarkBulkAttendance,
 } from './api';
+import { useCoachGroupsQuery, useGroupPerformanceTableQuery } from './features/performance-table/model/use-performance-table';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
 function avatarColor(id) { return AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length]; }
@@ -688,18 +689,64 @@ export function AttendanceMark({ sessionId, onBack }) {
 
 export function PerformanceTable() {
   const I = Icon;
-  const M = MOCK;
-  const group = M.groups[3];
-  const students = M.students.filter(s => s.group_id === group.id && s.status === 'active').slice(0, 12);
+  const currentYear = new Date().getFullYear();
+  const [seasonYear, setSeasonYear] = React.useState(currentYear);
+
+  // -- real API data --
+  const groupsQuery = useCoachGroupsQuery();
+  const groups = groupsQuery.data || [];
+
+  const [selectedGroupId, setSelectedGroupId] = React.useState(null);
+  // Default to first group once groups load
+  React.useEffect(() => {
+    if (!selectedGroupId && groups.length > 0) {
+      setSelectedGroupId(groups[0].id);
+    }
+  }, [groups, selectedGroupId]);
+
+  const tableQuery = useGroupPerformanceTableQuery(selectedGroupId, seasonYear);
+  const tableData = tableQuery.data || null;
+  const matches = tableData?.matches || [];
+  const rows = tableData?.rows || [];
+
+  const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
+
+  function cellStyle(rawValue) {
+    const v = rawValue == null ? null : String(rawValue).toLowerCase().trim();
+    switch (v) {
+      case 'goal':
+      case 'gol':
+        return { bg: 'var(--success-soft)', color: 'var(--success)', label: '⚽', numericGoals: 1 };
+      case 'assist':
+      case 'uzatma':
+        return { bg: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', label: '↗', numericGoals: 0 };
+      case 'yellow':
+      case 'sariq':
+        return { bg: 'var(--warning-soft)', color: 'var(--warning)', label: '▢', numericGoals: 0 };
+      case 'absent':
+      case 'kelmagan':
+        return { bg: 'var(--accent-soft)', color: 'var(--brand-red)', label: '✗', numericGoals: 0 };
+      case null:
+      case '':
+      case 'played':
+        return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: '·', numericGoals: 0 };
+      default: {
+        // Numeric cell — treat as goal count
+        const n = Number(rawValue);
+        if (!isNaN(n) && n > 0) return { bg: 'var(--success-soft)', color: 'var(--success)', label: `⚽ ${n}`, numericGoals: n };
+        return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: v || '·', numericGoals: 0 };
+      }
+    }
+  }
 
   async function handleExport() {
+    if (!selectedGroupId) return;
     try {
-      const seasonYear = 2026;
-      const blob = await apiDownloadCoachGroupPerformanceTableExport(group.id, seasonYear);
+      const blob = await apiDownloadCoachGroupPerformanceTableExport(selectedGroupId, seasonYear);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `performance-table-${group.id}-${seasonYear}.xlsx`;
+      a.download = `performance-table-${selectedGroupId}-${seasonYear}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -709,24 +756,15 @@ export function PerformanceTable() {
     }
   }
 
-  function cellFor(sid, mi) {
-    const code = ((sid * 13 + mi * 7) % 11);
-    if (code < 2) return { v: 'goal', n: 2 };
-    if (code < 4) return { v: 'goal', n: 1 };
-    if (code < 5) return { v: 'assist', n: 1 };
-    if (code < 6) return { v: 'yellow', n: 1 };
-    if (code < 7) return { v: 'absent', n: 0 };
-    return { v: 'played', n: 0 };
+  // Loading / error states
+  if (groupsQuery.isLoading) {
+    return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
   }
-
-  function cellStyle(v) {
-    switch (v) {
-      case 'goal': return { bg: 'var(--success-soft)', color: 'var(--success)', label: '⚽' };
-      case 'assist': return { bg: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', label: '↗' };
-      case 'yellow': return { bg: 'var(--warning-soft)', color: 'var(--warning)', label: '▢' };
-      case 'absent': return { bg: 'var(--accent-soft)', color: 'var(--brand-red)', label: '✗' };
-      default: return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: '·' };
-    }
+  if (groupsQuery.isError) {
+    return <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>Guruhlarni yuklashda xatolik yuz berdi.</div>;
+  }
+  if (groups.length === 0) {
+    return <div className="empty" style={{ padding: 48 }}>Guruhlar topilmadi.</div>;
   }
 
   return (
@@ -734,67 +772,101 @@ export function PerformanceTable() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Natijaviy jadval</h1>
-          <div className="page-sub">{group.name} · 2026 mavsumi · {M.matches.length} ta o'yin</div>
+          <div className="page-sub">
+            {selectedGroup?.name || '—'} · {seasonYear} mavsumi · {matches.length} ta o'yin
+          </div>
         </div>
         <div className="page-actions">
-          <select style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            {M.groups.map(g => <option key={g.id} defaultValue={g.id === group.id}>{g.name}</option>)}
+          <select
+            value={selectedGroupId || ''}
+            onChange={e => setSelectedGroupId(Number(e.target.value))}
+            style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}
+          >
+            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
-          <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel</button>
+          <select
+            value={seasonYear}
+            onChange={e => setSeasonYear(Number(e.target.value))}
+            style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}
+          >
+            {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <button className="btn" onClick={handleExport} disabled={!selectedGroupId}><I.Download size={15}/> Excel</button>
           <button className="btn primary"><I.Plus size={15}/> O'yin qo'shish</button>
         </div>
       </div>
 
-      <div className="card" style={{ overflow: 'auto' }}>
-        <table className="table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-          <thead>
-            <tr>
-              <th style={{ position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 2, minWidth: 220 }}>O'quvchi</th>
-              {M.matches.map(m => (
-                <th key={m.id} style={{ textAlign: 'center', minWidth: 90 }}>
-                  <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{m.match_date.slice(5)} · {m.is_home ? 'Uy' : 'Mehmon'}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'none', letterSpacing: 0 }}>{m.opponent}</div>
-                </th>
-              ))}
-              <th style={{ textAlign: 'center', minWidth: 80, background: 'var(--surface-2)' }}>Jami</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map(s => {
-              let goals = 0;
-              return (
-                <tr key={s.id} style={{ cursor: 'default' }}>
-                  <td style={{ position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 1, borderRight: '1px solid var(--border)' }}>
-                    <div className="row-name">
-                      <div className="avatar sm" style={{ background: s.avatar_color }}>{s.first_name[0]}{s.last_name[0]}</div>
-                      <div className="meta"><span className="name" style={{ fontSize: 13 }}>{s.full_name}</span><span className="sub">{s.age} yosh</span></div>
-                    </div>
-                  </td>
-                  {M.matches.map((m, mi) => {
-                    const c = cellFor(s.id, mi);
-                    const st = cellStyle(c.v);
-                    if (c.v === 'goal') goals += c.n;
-                    return (
-                      <td key={m.id} style={{ textAlign: 'center', padding: 4 }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, minWidth: 44, height: 30, padding: '0 10px', background: st.bg, color: st.color, borderRadius: 6, fontSize: 13, fontWeight: 700 }}>
-                          {st.label}{c.n > 1 ? ' ' + c.n : ''}
+      {tableQuery.isLoading && (
+        <div className="empty" style={{ padding: 48 }}>Jadval yuklanmoqda...</div>
+      )}
+
+      {tableQuery.isError && (
+        <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>Jadvalni yuklashda xatolik yuz berdi.</div>
+      )}
+
+      {!tableQuery.isLoading && !tableQuery.isError && matches.length === 0 && (
+        <div className="empty" style={{ padding: 48 }}>Bu guruh uchun {seasonYear} mavsum ma'lumotlari yo'q.</div>
+      )}
+
+      {!tableQuery.isLoading && !tableQuery.isError && matches.length > 0 && (
+        <>
+          <div className="card" style={{ overflow: 'auto' }}>
+            <table className="table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+              <thead>
+                <tr>
+                  <th style={{ position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 2, minWidth: 220 }}>O'quvchi</th>
+                  {matches.map(m => (
+                    <th key={m.id} style={{ textAlign: 'center', minWidth: 90 }}>
+                      <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{m.match_date?.slice(5)} · {m.tour_label || ''}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'none', letterSpacing: 0 }}>{m.opponent}</div>
+                    </th>
+                  ))}
+                  <th style={{ textAlign: 'center', minWidth: 80, background: 'var(--surface-2)' }}>Jami</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(row => {
+                  let goals = 0;
+                  return (
+                    <tr key={row.student_id} style={{ cursor: 'default' }}>
+                      <td style={{ position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 1, borderRight: '1px solid var(--border)' }}>
+                        <div className="row-name">
+                          <div className="avatar sm" style={{ background: avatarColor(row.student_id) }}>
+                            {row.student_name?.split(' ').map(p => p[0]).slice(0, 2).join('') || '??'}
+                          </div>
+                          <div className="meta">
+                            <span className="name" style={{ fontSize: 13 }}>{row.student_name}</span>
+                            {row.millati && <span className="sub">{row.millati}</span>}
+                          </div>
                         </div>
                       </td>
-                    );
-                  })}
-                  <td style={{ textAlign: 'center', background: 'var(--surface-2)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{goals}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ marginTop: 14, padding: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 18, fontSize: 12.5, flexWrap: 'wrap' }}>
-        <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>⚽</span>Gol</span>
-        <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>↗</span>Uzatma</span>
-        <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--warning-soft)', color: 'var(--warning)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>▢</span>Sariq kartochka</span>
-        <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--accent-soft)', color: 'var(--brand-red)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>✗</span>Kelmagan</span>
-      </div>
+                      {matches.map((m, mi) => {
+                        const rawCell = row.cells?.[mi] ?? null;
+                        const st = cellStyle(rawCell);
+                        goals += st.numericGoals;
+                        return (
+                          <td key={m.id} style={{ textAlign: 'center', padding: 4 }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, minWidth: 44, height: 30, padding: '0 10px', background: st.bg, color: st.color, borderRadius: 6, fontSize: 13, fontWeight: 700 }}>
+                              {st.label}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td style={{ textAlign: 'center', background: 'var(--surface-2)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{goals}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop: 14, padding: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 18, fontSize: 12.5, flexWrap: 'wrap' }}>
+            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>⚽</span>Gol</span>
+            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>↗</span>Uzatma</span>
+            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--warning-soft)', color: 'var(--warning)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>▢</span>Sariq kartochka</span>
+            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--accent-soft)', color: 'var(--brand-red)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>✗</span>Kelmagan</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

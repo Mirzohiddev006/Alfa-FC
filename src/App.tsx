@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React from 'react';
 import { Icon } from './icons';
-import { MOCK } from './data';
 import { Sidebar, Topbar } from './shell';
 import { LoginScreen, Dashboard } from './screens-1';
 import { StudentsList, StudentProfile, StudentNew } from './screens-2';
@@ -130,7 +129,7 @@ export default function App() {
         role={T.role}
         collapsed={navCollapsed}
         onToggle={() => setNavCollapsed(!navCollapsed)}
-        user={currentUser || MOCK.users[0]}
+        user={currentUser}
       />
       <div className="main">
         <Topbar
@@ -140,6 +139,7 @@ export default function App() {
           theme={T.theme}
           onTheme={(th) => T.setTweak('theme', th)}
           onSignOut={handleSignOut}
+          user={currentUser}
         />
         <div className="content">
           {route === 'dashboard' && <Dashboard role={T.role} onNav={navigate}/>} 

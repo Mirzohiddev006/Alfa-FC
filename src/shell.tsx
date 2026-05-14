@@ -114,9 +114,11 @@ export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
   );
 }
 
-export function Topbar({ crumbs, role, onRoleSwitch, theme, onTheme, onSignOut }) {
+export function Topbar({ crumbs, role, onRoleSwitch, theme, onTheme, onSignOut, user }) {
   const I = Icon;
   const [open, setOpen] = React.useState(false);
+  const fullName = user?.full_name || user?.name || user?.email || 'Alpha User';
+  const initials = getInitials(fullName);
   return (
     <div className="topbar">
       <div className="crumbs">
@@ -141,9 +143,9 @@ export function Topbar({ crumbs, role, onRoleSwitch, theme, onTheme, onSignOut }
       </button>
       <div style={{ position: 'relative' }}>
         <button className="user-chip" onClick={() => setOpen(!open)}>
-          <div className="avatar">AY</div>
+          <div className="avatar">{initials}</div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.15 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Akmal Yusupov</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600 }}>{fullName}</span>
             <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>{role}</span>
           </div>
           <I.ChevronDown size={14}/>

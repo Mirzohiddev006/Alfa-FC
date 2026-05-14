@@ -1,8 +1,9 @@
 // @ts-nocheck
-const BASE_URL = 'https://api.alpha.cognilabs.org';
+import { http } from './shared/api/http';
+import { tokenStore } from './shared/api/token';
 
-const TOKEN_KEY = 'alpha_token';
-const REFRESH_KEY = 'alpha_refresh';
+// Legacy helpers kept for callers that read the URL directly
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://api.alpha.cognilabs.org').replace(/\/$/, '');
 
 function unwrapData(json) {
   return json?.data ?? json ?? null;
@@ -54,39 +55,75 @@ function buildQuery(params = {}, allowedKeys = [], aliases = {}, pageSizeMax) {
   return new URLSearchParams(query).toString();
 }
 
-export function getToken() { return localStorage.getItem(TOKEN_KEY); }
-export function setTokens(access, refresh) {
-  localStorage.setItem(TOKEN_KEY, access);
-  if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
-}
-export function clearTokens() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-}
+// Token helpers — delegate to tokenStore so Axios interceptors always see current tokens
+export function getToken() { return tokenStore.getAccessToken(); }
+export function setTokens(access, refresh) { tokenStore.setTokens(access, refresh); }
+export function clearTokens() { tokenStore.clearTokens(); }
 
 let _onUnauthorized = null;
-export function setUnauthorizedHandler(fn) { _onUnauthorized = fn; }
+export function setUnauthorizedHandler(fn) {
+  _onUnauthorized = fn;
+  // Wire the Axios 401 path to the same handler so the app logs out on refresh failure.
+  // The http interceptor clears tokens; here we additionally trigger the UI logout.
+  http.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401 && !error.config?._retry) {
+        // _retry is set by the existing interceptor only after a failed refresh attempt.
+        // If we reach this point without _retry, the token was simply missing — log out.
+      }
+      // After the existing refresh interceptor has cleared tokens it rejects the promise.
+      // Check whether tokens are now gone; if so, invoke the logout handler.
+      if (!tokenStore.getAccessToken() && _onUnauthorized) {
+        _onUnauthorized();
+      }
+      return Promise.reject(error);
+    },
+  );
+}
 
+/**
+ * apiFetch — now backed by the Axios `http` instance which handles:
+ *   - Authorization header attachment (request interceptor)
+ *   - 401 → silent token refresh → retry (response interceptor)
+ *
+ * FormData bodies are passed through unchanged; Axios sets the correct
+ * multipart Content-Type automatically when the body is a FormData object.
+ */
 export async function apiFetch(path, options = {}) {
-  const token = getToken();
+  const method = (options.method || 'GET').toUpperCase();
   const isFormData = options.body instanceof FormData;
-  const headers = { ...options.headers };
-  if (!isFormData) headers['Content-Type'] = 'application/json';
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(BASE_URL + path, { ...options, headers });
+  const axiosConfig = {
+    method,
+    url: path,
+    headers: { ...options.headers },
+  };
 
-  if (res.status === 401) {
-    clearTokens();
-    if (_onUnauthorized) _onUnauthorized();
-    return null;
+  if (options.body !== undefined) {
+    axiosConfig.data = options.body;
+    // For JSON strings, parse back to object so Axios serialises correctly.
+    if (!isFormData && typeof options.body === 'string') {
+      try { axiosConfig.data = JSON.parse(options.body); } catch { /* leave as-is */ }
+    }
+    if (!isFormData) {
+      axiosConfig.headers['Content-Type'] = 'application/json';
+    }
+    // FormData: let Axios set Content-Type with boundary automatically.
   }
 
-  let json;
-  try { json = await res.json(); } catch { json = {}; }
-
-  if (!res.ok) throw new Error(json.detail || `Xatolik: ${res.status}`);
-  return json;
+  try {
+    const res = await http.request(axiosConfig);
+    return res.data;
+  } catch (error) {
+    if (error.response?.status === 401) {
+      // Tokens already cleared by the http interceptor.
+      if (_onUnauthorized) _onUnauthorized();
+      return null;
+    }
+    const detail = error.response?.data?.detail;
+    throw new Error(detail || `Xatolik: ${error.response?.status ?? error.message}`);
+  }
 }
 
 // Auth

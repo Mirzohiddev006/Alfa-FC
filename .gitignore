@@ -42,3 +42,7 @@ ui-tsx-files.tar.gz
 .eslintcache
 /.pnp
 /.pnp.js
+
+# Generated reports/inspection files
+*API*FRONTEND-INSPECTOR*.md
+API-FRONTEND-INSPECTOR.md
