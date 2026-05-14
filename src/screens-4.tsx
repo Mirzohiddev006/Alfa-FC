@@ -1189,30 +1189,38 @@ export function TransactionsScreen({ onToast } = {}) {
   const [manualSaving, setManualSaving] = React.useState(false);
   const availableMonths = genMonths(12);
 
+  function extractList(res) {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.items)) return res.items;
+    if (Array.isArray(res.results)) return res.results;
+    return [];
+  }
+
   async function loadData() {
     setLoading(true);
     setLoadError('');
     try {
-      const loadRows = scope === 'unassigned'
-        ? apiGetUnassignedTransactions({ page_size: 200 })
-        : apiGetTransactionsWithName({ page_size: 200 });
-
-      const [rowsRes, statsRes] = await Promise.allSettled([loadRows, apiGetTransactionStats()]);
-
-      let nextRows = [];
-      if (rowsRes.status === 'fulfilled') {
-        nextRows = rowsRes.value?.data || [];
-      } else if (scope !== 'unassigned') {
-        try {
-          const fallback = await apiGetTransactions({ page_size: 200 });
-          nextRows = fallback?.data || [];
-        } catch { nextRows = []; }
+      let rowsData = null;
+      if (scope === 'unassigned') {
+        try { rowsData = await apiGetUnassignedTransactions({ page_size: 200 }); } catch { rowsData = null; }
+      } else {
+        // Try /withname first, fall back to plain /transactions
+        try { rowsData = await apiGetTransactionsWithName({ page_size: 200 }); } catch { rowsData = null; }
+        if (extractList(rowsData).length === 0 && !rowsData) {
+          try { rowsData = await apiGetTransactions({ page_size: 200 }); } catch { rowsData = null; }
+        }
       }
 
-      setRows(nextRows);
-      setStats(statsRes.status === 'fulfilled' ? (statsRes.value?.data || null) : null);
+      let statsData = null;
+      try { statsData = await apiGetTransactionStats(); } catch { statsData = null; }
 
-      if (rowsRes.status === 'rejected' && statsRes.status === 'rejected') {
+      const nextRows = extractList(rowsData);
+      setRows(nextRows);
+      setStats(statsData?.data ?? statsData ?? null);
+
+      if (!rowsData && !statsData) {
         setLoadError('Tranzaksiyalar API javobi olinmadi');
       }
     } finally {
