@@ -5,7 +5,7 @@ import { MOCK } from './data';
 import {
   apiGetGroups, apiGetHeadCoachGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
   apiGetSessions, apiGetSessionDetails, apiGetCoachSessionDetails, apiCreateSession,
-  apiGetCoaches, apiGetGroupStudentsExportUrl, apiGetCoachGroupPerformanceTableExportUrl,
+  apiGetCoaches, apiGetGroupStudentsExportUrl, apiDownloadCoachGroupPerformanceTableExport,
   apiMarkAttendance, apiMarkBulkAttendance,
 } from './api';
 
@@ -694,8 +694,16 @@ export function PerformanceTable() {
 
   async function handleExport() {
     try {
-      const url = await apiGetCoachGroupPerformanceTableExportUrl(group.id, 2026);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const seasonYear = 2026;
+      const blob = await apiDownloadCoachGroupPerformanceTableExport(group.id, seasonYear);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `performance-table-${group.id}-${seasonYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (e) {
       alert('Excel ochilmadi: ' + e.message);
     }

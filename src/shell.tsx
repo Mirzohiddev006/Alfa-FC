@@ -23,7 +23,6 @@ const NAV_ITEMS = [
   { section: 'Boshqaruv', items: [
     { id: 'waiting-list', label: "Kutish ro'yxati", icon: 'Bell', perm: 'students:view' },
     { id: 'users', label: 'Foydalanuvchilar', icon: 'Users', perm: 'users:manage' },
-    { id: 'roles', label: 'Rollar va ruxsatlar', icon: 'Shield', perm: 'roles:manage' },
     { id: 'settings', label: 'Sozlamalar', icon: 'Settings', perm: 'settings:system:view' },
   ]},
 ];

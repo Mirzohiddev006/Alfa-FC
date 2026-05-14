@@ -369,6 +369,18 @@ export async function apiGetCoachGroupPerformanceTableExportUrl(groupId, season_
   return `${BASE_URL}/coach/groups/${groupId}/performance-table/export?season_year=${encodeURIComponent(season_year)}`;
 }
 
+export async function apiDownloadCoachGroupPerformanceTableExport(groupId, season_year) {
+  const token = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(
+    `${BASE_URL}/coach/groups/${groupId}/performance-table/export?season_year=${encodeURIComponent(season_year)}`,
+    { headers }
+  );
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  return res.blob();
+}
+
 export async function apiUploadCoachSessionKonspekt(sessionId, formData) {
   return apiFetch(`/coach/sessions/${sessionId}/upload-konspekt`, { method: 'POST', body: formData });
 }
