@@ -567,6 +567,15 @@ export function apiPaymentsExcelUrl(params = {}) {
   return `${BASE_URL}/reports/payments-excel${q ? '?' + q : ''}`;
 }
 
+export async function apiDownloadPaymentsExcel(params = {}) {
+  const token = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiPaymentsExcelUrl(params), { headers });
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  return res.blob();
+}
+
 export async function apiGetArchiveStats(year) {
   return apiFetch(`/archive/stats/${year}`);
 }
@@ -628,7 +637,15 @@ export async function apiDeleteWaitingList(id) {
 
 // Students extra
 export async function apiChangeStudentGroup(id, group_id) {
-  return apiFetch(`/students/${id}/group`, { method: 'PATCH', body: JSON.stringify({ group_id }) });
+  return apiFetch(`/students/${id}/group?group_id=${encodeURIComponent(group_id)}`, { method: 'PATCH' });
+}
+
+export async function apiDeleteUsersBulk(ids) {
+  return apiFetch('/users/bulk-delete', { method: 'POST', body: JSON.stringify(ids) });
+}
+
+export async function apiGetStudentForContract(id) {
+  return apiFetch(`/students/${id}`);
 }
 
 export async function apiUploadStudentPhoto(id, formData) {
