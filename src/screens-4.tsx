@@ -95,8 +95,6 @@ export function ContractsScreen({ onOpenContract }) {
   const [loading, setLoading] = React.useState(true);
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
-  const [openMenuContractId, setOpenMenuContractId] = React.useState(null);
-  const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
   const [terminating, setTerminating] = React.useState(null);
   const [terminateReason, setTerminateReason] = React.useState('');
   const [terminateModal, setTerminateModal] = React.useState(false);
@@ -117,11 +115,7 @@ export function ContractsScreen({ onOpenContract }) {
 
   React.useEffect(() => { load(); }, []);
 
-  React.useEffect(() => {
-    const closeMenu = () => setOpenMenuContractId(null);
-    window.addEventListener('click', closeMenu);
-    return () => window.removeEventListener('click', closeMenu);
-  }, []);
+  
 
   const rows = contracts.filter((c) => {
     if (statusFilter !== 'all' && c.status !== statusFilter) return false;
@@ -226,30 +220,7 @@ export function ContractsScreen({ onOpenContract }) {
                 </td>
                 <td style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt.format(c.monthly_fee || 0)} so'm</td>
                 <td>{statusChip(c.status)}</td>
-                <td style={{ position: 'relative' }}>
-                  <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
-                    e.stopPropagation();
-                    if (openMenuContractId === c.id) {
-                      setOpenMenuContractId(null);
-                    } else {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setMenuPos({ x: rect.right - 160, y: rect.bottom + 4 });
-                      setOpenMenuContractId(c.id);
-                    }
-                  }}><I.More size={15} /></button>
-                  {openMenuContractId === c.id && (
-                    <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 160, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
-                      <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpenContract?.(c.id); setOpenMenuContractId(null); }}>
-                        <I.Eye size={14} /> Ko'rish
-                      </button>
-                      {c.status === 'ACTIVE' && (
-                        <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => openTerminate(c)}>
-                          <I.XCircle size={14} /> Bekor qilish
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </td>
+                <td />
               </tr>
             ))}
           </tbody>
