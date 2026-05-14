@@ -138,49 +138,68 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
       </div>
 
       {selectedGroup && (
-        <div className="card" style={{ marginBottom: 16, padding: 18, position: 'relative', zIndex: 100, boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-                <span className="chip success"><span className="chip-dot"></span>Faol guruh</span>
-                <span className="chip navy">{groupStudents.length} o'quvchi</span>
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}
+          onClick={() => onCloseGroup?.()}
+        >
+          {/* backdrop */}
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(11,20,38,0.45)' }} />
+
+          {/* drawer panel */}
+          <div
+            className="card"
+            style={{ position: 'relative', width: 520, maxWidth: '90vw', height: '100vh', overflowY: 'auto', borderRadius: '16px 0 0 16px', padding: 24, boxShadow: '-20px 0 60px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', gap: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+                  <span className="chip success"><span className="chip-dot"></span>Faol guruh</span>
+                  <span className="chip navy">{groupStudents.length} o'quvchi</span>
+                </div>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{selectedGroup.name}</h2>
+                <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 13 }}>{selectedGroup.description || "Tavsif yo'q"}</div>
               </div>
-              <h2 style={{ margin: 0, fontSize: 22 }}>{selectedGroup.name}</h2>
-              <div style={{ marginTop: 6, color: 'var(--muted)', fontSize: 13.5 }}>{selectedGroup.description || "Tavsif yo'q"}</div>
+              <button className="icon-btn" style={{ width: 32, height: 32, flexShrink: 0 }} onClick={() => onCloseGroup?.()}>
+                <I.X size={16} />
+              </button>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn ghost sm" onClick={() => onCloseGroup?.()}>Yopish</button>
-            </div>
-          </div>
 
-          {groupLoading ? (
-            <div className="empty" style={{ padding: 20 }}>Yuklanmoqda...</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
-              <StatCard label="Murabbiy" value={selectedGroup.coach_name || coachMap[selectedGroup.coach_id] || '—'} />
-              <StatCard label="Imkoniyat" value={selectedGroup.capacity ?? '—'} />
-              <StatCard label="Faol o'quvchi" value={selectedGroup.active_students_count ?? groupStudents.filter(s => s.status === 'active').length} />
-              <StatCard label="Jami o'quvchi" value={groupStudents.length} />
-            </div>
-          )}
-
-          <div style={{ marginTop: 16 }}>
-            <div className="card-title" style={{ marginBottom: 10 }}>Guruhdagi o'quvchilar</div>
-            {groupStudents.length === 0 ? (
-              <div className="empty" style={{ padding: 20 }}>O'quvchilar topilmadi</div>
+            {/* stats */}
+            {groupLoading ? (
+              <div className="empty" style={{ padding: 20 }}>Yuklanmoqda...</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-                {groupStudents.slice(0, 12).map((s) => (
-                  <div key={s.id} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div className="avatar sm" style={{ background: avatarColor(s.id) }}>{s.first_name?.[0]}{s.last_name?.[0]}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.first_name} {s.last_name}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{s.phone || "Telefon yo'q"}</div>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                <StatCard label="Murabbiy" value={selectedGroup.coach_name || coachMap[selectedGroup.coach_id] || '—'} />
+                <StatCard label="Imkoniyat" value={selectedGroup.capacity ?? '—'} />
+                <StatCard label="Faol o'quvchi" value={selectedGroup.active_students_count ?? groupStudents.filter(s => s.status === 'active').length} />
+                <StatCard label="Jami o'quvchi" value={groupStudents.length} />
               </div>
             )}
+
+            {/* students list */}
+            <div>
+              <div className="card-title" style={{ marginBottom: 10 }}>Guruhdagi o'quvchilar</div>
+              {groupStudents.length === 0 ? (
+                <div className="empty" style={{ padding: 20 }}>O'quvchilar topilmadi</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {groupStudents.map((s) => (
+                    <div key={s.id} style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div className="avatar sm" style={{ background: avatarColor(s.id) }}>{s.first_name?.[0]}{s.last_name?.[0]}</div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.first_name} {s.last_name}</div>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{s.phone || "Telefon yo'q"}</div>
+                      </div>
+                      <span className={'chip' + (s.status === 'active' ? ' success' : '')} style={{ fontSize: 11 }}>
+                        {s.status === 'active' ? 'Faol' : s.status || '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
