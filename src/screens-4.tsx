@@ -44,6 +44,7 @@ import {
   apiGetDebtors,
   apiGetFinanceReport,
   apiDebtorsExportUrl,
+  apiDownloadDebtors,
   apiPayersExportUrl,
   apiPaymentsExcelUrl,
   apiDownloadPaymentsExcel,
@@ -146,8 +147,20 @@ export function ContractsScreen({ onOpenContract }) {
     }
   }
 
-  function handleExport() {
-    window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
+  async function handleExport() {
+    try {
+      const blob = await apiDownloadPaymentsExcel();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contracts-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) {
+      alert('Export xatoligi: ' + e.message);
+    }
   }
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
@@ -1539,11 +1552,35 @@ export function ReportsScreen() {
 
   const safeSummary = summary || {};
 
-  function handleExcel() {
-    window.open(apiPaymentsExcelUrl(), '_blank', 'noopener,noreferrer');
+  async function handleExcel() {
+    try {
+      const blob = await apiDownloadPaymentsExcel();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payments-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) {
+      alert('Export xatoligi: ' + e.message);
+    }
   }
-  function handleDebtorsExport() {
-    window.open(apiDebtorsExportUrl(), '_blank', 'noopener,noreferrer');
+  async function handleDebtorsExport() {
+    try {
+      const blob = await apiDownloadDebtors();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `debtors-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) {
+      alert('Export xatoligi: ' + e.message);
+    }
   }
 
   return (

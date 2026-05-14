@@ -621,6 +621,15 @@ export async function apiDownloadPaymentsExcel(params = {}) {
   return res.blob();
 }
 
+export async function apiDownloadDebtors() {
+  const token = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiDebtorsExportUrl(), { headers });
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  return res.blob();
+}
+
 export async function apiGetArchiveStats(year) {
   return apiFetch(`/archive/stats/${year}`);
 }
