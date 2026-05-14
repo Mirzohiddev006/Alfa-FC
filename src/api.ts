@@ -558,6 +558,14 @@ export async function apiGetDebtors(params = {}) {
   return apiFetch(`/reports/debtors${q ? '?' + q : ''}`);
 }
 
+// Performance Table
+export async function apiAddPerformanceTableMatch(groupId, matchData) {
+  return apiFetch(`/coach/groups/${groupId}/performance-table/columns`, {
+    method: 'POST',
+    body: JSON.stringify(matchData),
+  });
+}
+
 export async function apiGetPayers(params = {}) {
   const q = new URLSearchParams(params).toString();
   return apiFetch(`/reports/payers${q ? '?' + q : ''}`);

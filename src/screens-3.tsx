@@ -6,7 +6,7 @@ import {
   apiGetGroups, apiGetHeadCoachGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
   apiGetSessions, apiGetSessionDetails, apiGetCoachSessionDetails, apiCreateSession,
   apiGetCoaches, apiGetGroupStudentsExportUrl, apiDownloadCoachGroupPerformanceTableExport,
-  apiMarkAttendance, apiMarkBulkAttendance,
+  apiMarkAttendance, apiMarkBulkAttendance, apiAddPerformanceTableMatch,
 } from './api';
 import { useCoachGroupsQuery, useGroupPerformanceTableQuery } from './features/performance-table/model/use-performance-table';
 
@@ -709,7 +709,61 @@ export function PerformanceTable() {
   const matches = tableData?.matches || [];
   const rows = tableData?.rows || [];
 
+  React.useEffect(() => {
+    if (tableQuery.data) {
+      console.log('Performance table data loaded:', {
+        matches: matches.length,
+        rows: rows.length,
+        data: tableQuery.data,
+      });
+    }
+    if (tableQuery.isError) {
+      console.error('Performance table error:', tableQuery.error);
+    }
+  }, [tableQuery.data, tableQuery.isError, tableQuery.error, matches.length, rows.length]);
+
   const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
+
+  const [showAddMatch, setShowAddMatch] = React.useState(false);
+  const [newMatch, setNewMatch] = React.useState({
+    match_date: new Date().toISOString().slice(0, 10),
+    opponent: '',
+    tour_label: '',
+  });
+  const [savingMatch, setSavingMatch] = React.useState(false);
+
+  async function handleAddMatch() {
+    if (!selectedGroupId || !newMatch.opponent.trim() || !newMatch.match_date) {
+      alert('O\'yin sanasi va raqib majburiy');
+      return;
+    }
+    setSavingMatch(true);
+    try {
+      await apiAddPerformanceTableMatch(selectedGroupId, {
+        season_year: seasonYear,
+        match_date: newMatch.match_date,
+        opponent: newMatch.opponent.trim(),
+        tour_label: newMatch.tour_label.trim() || undefined,
+        values: [],
+      });
+      setShowAddMatch(false);
+      setNewMatch({
+        match_date: new Date().toISOString().slice(0, 10),
+        opponent: '',
+        tour_label: '',
+      });
+      // Refetch table data
+      setTimeout(() => {
+        if (tableQuery.refetch) {
+          tableQuery.refetch();
+        }
+      }, 300);
+    } catch (e) {
+      alert('O\'yin qo\'shilmadi: ' + e.message);
+    } finally {
+      setSavingMatch(false);
+    }
+  }
 
   function cellStyle(rawValue) {
     const v = rawValue == null ? null : String(rawValue).toLowerCase().trim();
@@ -792,7 +846,7 @@ export function PerformanceTable() {
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <button className="btn" onClick={handleExport} disabled={!selectedGroupId}><I.Download size={15}/> Excel</button>
-          <button className="btn primary"><I.Plus size={15}/> O'yin qo'shish</button>
+          <button className="btn primary" onClick={() => setShowAddMatch(true)} disabled={!selectedGroupId}><I.Plus size={15}/> O'yin qo'shish</button>
         </div>
       </div>
 
@@ -801,11 +855,24 @@ export function PerformanceTable() {
       )}
 
       {tableQuery.isError && (
-        <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>Jadvalni yuklashda xatolik yuz berdi.</div>
+        <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>
+          <div>Jadvalni yuklashda xatolik yuz berdi.</div>
+          <div style={{ fontSize: 12, marginTop: 8, color: 'var(--muted)' }}>Tafsilotlar uchun console ni tekshiring (F12)</div>
+        </div>
       )}
 
       {!tableQuery.isLoading && !tableQuery.isError && matches.length === 0 && (
-        <div className="empty" style={{ padding: 48 }}>Bu guruh uchun {seasonYear} mavsum ma'lumotlari yo'q.</div>
+        <div className="empty" style={{ padding: 48 }}>
+          <div>Bu guruh uchun {seasonYear} mavsum ma'lumotlari yo'q.</div>
+          <div style={{ fontSize: 12, marginTop: 8, color: 'var(--muted)' }}>O'yinlar yoki o'quvchi ma'lumotlari qo'shilganini tekshiring</div>
+        </div>
+      )}
+
+      {!tableQuery.isLoading && !tableQuery.isError && matches.length > 0 && rows.length === 0 && (
+        <div className="empty" style={{ padding: 48 }}>
+          <div>O'yinlar topildi lekin o'quvchilar topilmadi.</div>
+          <div style={{ fontSize: 12, marginTop: 8, color: 'var(--muted)' }}>Guruhga o'quvchi qo'shilganini tekshiring</div>
+        </div>
       )}
 
       {!tableQuery.isLoading && !tableQuery.isError && matches.length > 0 && (
@@ -866,6 +933,28 @@ export function PerformanceTable() {
             <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--accent-soft)', color: 'var(--brand-red)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>✗</span>Kelmagan</span>
           </div>
         </>
+      )}
+
+      {showAddMatch && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowAddMatch(false)}>
+          <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Yangi o'yin</h3>
+              <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setShowAddMatch(false)}><I.X size={16}/></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="field"><label>Sana <span className="req">*</span></label><input type="date" value={newMatch.match_date} onChange={e => setNewMatch(p => ({ ...p, match_date: e.target.value }))} /></div>
+              <div className="field"><label>Raqib <span className="req">*</span></label><input value={newMatch.opponent} onChange={e => setNewMatch(p => ({ ...p, opponent: e.target.value }))} placeholder="Masalan: Almaty FC"/></div>
+              <div className="field"><label>Tur etiketi</label><input value={newMatch.tour_label} onChange={e => setNewMatch(p => ({ ...p, tour_label: e.target.value }))} placeholder="Masalan: 1-tur"/></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button className="btn ghost" onClick={() => setShowAddMatch(false)}>Bekor</button>
+              <button className="btn primary" onClick={handleAddMatch} disabled={savingMatch}>
+                <I.Plus size={14}/> {savingMatch ? 'Qo\'shilmoqda...' : "Qo'shish"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

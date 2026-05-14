@@ -8,10 +8,20 @@ export async function getCoachGroups(): Promise<CoachGroup[]> {
 }
 
 export async function getGroupPerformanceTable(groupId: string | number, seasonYear: number): Promise<GroupPerformanceTable | null> {
-  const { data } = await http.get<ApiResponse<GroupPerformanceTable>>(`/coach/groups/${groupId}/performance-table`, {
-    params: { season_year: seasonYear },
-  });
+  try {
+    const { data } = await http.get<ApiResponse<GroupPerformanceTable>>(`/coach/groups/${groupId}/performance-table`, {
+      params: { season_year: seasonYear },
+    });
 
-  if (!data?.data) return null;
-  return data.data;
+    console.log('Performance API response:', { data, groupId, seasonYear });
+
+    if (!data?.data) {
+      console.warn('No data in performance response', { data });
+      return null;
+    }
+    return data.data;
+  } catch (err) {
+    console.error('Performance API error:', err, { groupId, seasonYear });
+    throw err;
+  }
 }
