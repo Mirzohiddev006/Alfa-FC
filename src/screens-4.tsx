@@ -461,12 +461,21 @@ export function GateLogsScreen() {
   const [logs, setLogs] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [period, setPeriod] = React.useState('today');
+  const [error, setError] = React.useState('');
 
   React.useEffect(() => {
     setLoading(true);
+    setError('');
     apiGetGateLogs({ page_size: 200 })
-      .then((res) => setLogs(res?.data || []))
-      .catch(() => { })
+      .then((res) => {
+        const logData = res?.data?.data || res?.data || [];
+        setLogs(Array.isArray(logData) ? logData : []);
+      })
+      .catch((err) => {
+        console.error('Gate logs error:', err);
+        setError('Darvoza loglari yuklashda xatolik yuz berdi');
+        setLogs([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -486,6 +495,8 @@ export function GateLogsScreen() {
   const denied = rows.filter((l) => l.allowed === false).length;
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+
+  if (error) return <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>{error}</div>;
 
   return (
     <div>
@@ -1612,7 +1623,7 @@ export function ReportsScreen() {
             <div className="card" style={{ padding: 16 }}>
               <div className="card-title" style={{ marginBottom: 12 }}>Moliya hisoboti</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
-                {financeReport.total_income !== undefined && <Stat label="Jami daromad" value={`${fmt.format(financeReport.total_income || 0)} so'm`} tone="success" icon={I.TrendingUp} />}
+                {(financeReport.total_income !== undefined || financeReport.total_revenue !== undefined) && <Stat label="Jami daromad" value={`${fmt.format((financeReport.total_income || financeReport.total_revenue) || 0)} so'm`} tone="success" icon={I.TrendingUp} />}
                 {financeReport.total_paid !== undefined && <Stat label="To'langan" value={`${fmt.format(financeReport.total_paid || 0)} so'm`} tone="navy" icon={I.Check} />}
                 {financeReport.total_debt !== undefined && <Stat label="Qarz" value={`${fmt.format(financeReport.total_debt || 0)} so'm`} tone="danger" icon={I.AlertTriangle} />}
               </div>
@@ -1633,9 +1644,21 @@ export function ReportsScreen() {
                   </table>
                 </div>
               )}
-              {!financeReport.total_income && !financeReport.total_paid && (
-                <div style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                  {JSON.stringify(financeReport, null, 2)}
+              {financeReport.breakdown && Array.isArray(financeReport.breakdown) && financeReport.breakdown.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>TO'LOV MANBAI BO'YICHA</div>
+                  <table className="table">
+                    <thead><tr><th>Manbai</th><th style={{ textAlign: 'right' }}>Summa</th><th style={{ textAlign: 'right' }}>Miqdori</th></tr></thead>
+                    <tbody>
+                      {financeReport.breakdown.map((b, i) => (
+                        <tr key={i}>
+                          <td>{b.source || '—'}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.format(b.total_amount || 0)} so'm</td>
+                          <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{b.transaction_count || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
