@@ -307,6 +307,7 @@ export function SessionsScreen({ onMark }) {
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState('today');
+  const [selectedDate, setSelectedDate] = React.useState('');
   const [showCreate, setShowCreate] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -341,6 +342,7 @@ export function SessionsScreen({ onMark }) {
   const sessionsWithStatus = sessions.map(s => ({ ...s, _status: sessionStatus(s.session_date) }));
 
   const list = sessionsWithStatus.filter(s => {
+    if (selectedDate && s.session_date !== selectedDate) return false;
     if (filter === 'all') return true;
     if (filter === 'week') {
       const d = new Date(s.session_date);
@@ -417,11 +419,24 @@ export function SessionsScreen({ onMark }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
           {days.map(d => {
             const isToday = d.iso === today;
+            const isSelected = d.iso === selectedDate;
             return (
-              <div key={d.iso} style={{ padding: 12, borderRadius: 10, background: isToday ? 'var(--brand-navy)' : 'var(--surface-2)', color: isToday ? 'white' : 'var(--text)', cursor: 'pointer', textAlign: 'center' }}>
-                <div style={{ fontSize: 11, opacity: isToday ? 0.8 : 0.6, fontWeight: 600, textTransform: 'uppercase' }}>{d.label}</div>
+              <div
+                key={d.iso}
+                onClick={() => { setSelectedDate(d.iso); setFilter('all'); }}
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  border: isSelected ? '1px solid var(--brand-red)' : '1px solid transparent',
+                  background: isSelected ? 'var(--selected)' : isToday ? 'var(--brand-navy)' : 'var(--surface-2)',
+                  color: isSelected ? 'var(--text)' : isToday ? 'white' : 'var(--text)',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: 11, opacity: isSelected ? 0.8 : isToday ? 0.8 : 0.6, fontWeight: 600, textTransform: 'uppercase' }}>{d.label}</div>
                 <div style={{ fontSize: 22, fontWeight: 700, margin: '4px 0' }}>{d.num}</div>
-                <div style={{ fontSize: 11, opacity: isToday ? 0.85 : 0.7 }}>{d.count > 0 ? d.count + ' sessiya' : '—'}</div>
+                <div style={{ fontSize: 11, opacity: isSelected ? 0.85 : isToday ? 0.85 : 0.7 }}>{d.count > 0 ? d.count + ' sessiya' : '—'}</div>
               </div>
             );
           })}
@@ -432,6 +447,11 @@ export function SessionsScreen({ onMark }) {
         {[['today', 'Bugun'], ['upcoming', 'Kelayotgan'], ['past', 'Tugagan'], ['all', 'Hammasi']].map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)} className={'btn sm ' + (filter === k ? '' : 'ghost')} style={{ background: filter === k ? 'var(--selected)' : 'transparent' }}>{l}</button>
         ))}
+        {selectedDate && (
+          <button className="btn sm ghost" onClick={() => setSelectedDate('')}>
+            Kun filtri: {selectedDate} <I.X size={13}/>
+          </button>
+        )}
       </div>
 
       <div className="table-wrap">
