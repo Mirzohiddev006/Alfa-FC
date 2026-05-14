@@ -138,7 +138,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
       </div>
 
       {selectedGroup && (
-        <div className="card" style={{ marginBottom: 16, padding: 18, position: 'relative', zIndex: 50 }}>
+        <div className="card" style={{ marginBottom: 16, padding: 18, position: 'relative', zIndex: 100, boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
