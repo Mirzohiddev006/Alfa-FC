@@ -757,6 +757,7 @@ export function TransactionsScreen({ onToast } = {}) {
   const I = Icon;
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState('');
   const [source, setSource] = React.useState('all');
   const [scope, setScope] = React.useState('all');
   const [stats, setStats] = React.useState(null);
@@ -764,21 +765,52 @@ export function TransactionsScreen({ onToast } = {}) {
   const [detailLoading, setDetailLoading] = React.useState(false);
 
   React.useEffect(() => {
-    setLoading(true);
-    const loadRows = scope === 'unassigned'
-      ? apiGetUnassignedTransactions({ page_size: 200 })
-      : apiGetTransactionsWithName({ page_size: 200 });
+    let mounted = true;
+    async function loadData() {
+      setLoading(true);
+      setLoadError('');
+      try {
+        const loadRows = scope === 'unassigned'
+          ? apiGetUnassignedTransactions({ page_size: 200 })
+          : apiGetTransactionsWithName({ page_size: 200 });
 
-    Promise.all([
-      loadRows,
-      apiGetTransactionStats(),
-    ])
-      .then(([rowsRes, statsRes]) => {
-        setRows(rowsRes?.data || []);
-        setStats(statsRes?.data || null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+        const [rowsRes, statsRes] = await Promise.allSettled([
+          loadRows,
+          apiGetTransactionStats(),
+        ]);
+
+        let nextRows = [];
+        if (rowsRes.status === 'fulfilled') {
+          nextRows = rowsRes.value?.data || [];
+        } else if (scope !== 'unassigned') {
+          try {
+            const fallback = await apiGetTransactions({ page_size: 200 });
+            nextRows = fallback?.data || [];
+          } catch {
+            nextRows = [];
+          }
+        }
+
+        const nextStats = statsRes.status === 'fulfilled' ? (statsRes.value?.data || null) : null;
+
+        if (!mounted) return;
+        setRows(nextRows);
+        setStats(nextStats);
+
+        if (rowsRes.status === 'rejected' && statsRes.status === 'rejected') {
+          setLoadError("Tranzaksiyalar API javobi olinmadi");
+        } else if (rowsRes.status === 'rejected') {
+          setLoadError("Tranzaksiya ro'yxati qisman yuklanmadi");
+        } else if (statsRes.status === 'rejected') {
+          setLoadError('Statistika qisman yuklanmadi');
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => { mounted = false; };
   }, [scope]);
 
   function handleExport() {
@@ -879,6 +911,13 @@ export function TransactionsScreen({ onToast } = {}) {
         <table className="table">
           <thead><tr><th>Sana</th><th>O'quvchi</th><th>Manba</th><th>Oylar</th><th style={{ textAlign: 'right' }}>Summa</th><th>Status</th></tr></thead>
           <tbody>
+            {list.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>
+                  {loadError || "Tranzaksiya topilmadi"}
+                </td>
+              </tr>
+            )}
             {list.map((t) => (
               <tr key={t.id} onClick={() => openDetail(t.id)} style={{ cursor: 'pointer' }}>
                 <td style={{ fontVariantNumeric: 'tabular-nums' }}>{(t.paid_at || '').slice(0, 10)}</td>
@@ -940,28 +979,50 @@ export function ReportsScreen() {
   const [attendanceGroups, setAttendanceGroups] = React.useState([]);
   const [terminatedSummary, setTerminatedSummary] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState('');
 
   React.useEffect(() => {
-    Promise.all([
-      apiGetReportsSummary(),
-      apiGetReportsRevenueDynamics('month'),
-      apiGetReportsPaymentsBySource(),
-      apiGetAttendanceGroupsReport(),
-      apiGetReportsTerminatedSummary(),
-    ])
-      .then(([s, d, p, a, t]) => {
-        setSummary(s || null);
-        setDyn(d || []);
-        setBySource(p || []);
-        setAttendanceGroups(a?.data || []);
-        setTerminatedSummary(t?.data || null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let mounted = true;
+    async function loadData() {
+      setLoading(true);
+      setLoadError('');
+      try {
+        const results = await Promise.allSettled([
+          apiGetReportsSummary(),
+          apiGetReportsRevenueDynamics('month'),
+          apiGetReportsPaymentsBySource(),
+          apiGetAttendanceGroupsReport(),
+          apiGetReportsTerminatedSummary(),
+        ]);
+
+        if (!mounted) return;
+
+        const [s, d, p, a, t] = results;
+        const summaryData = s.status === 'fulfilled' ? (s.value || {}) : {};
+        setSummary(summaryData);
+        setDyn(d.status === 'fulfilled' ? (d.value || []) : []);
+        setBySource(p.status === 'fulfilled' ? (p.value || []) : []);
+        setAttendanceGroups(a.status === 'fulfilled' ? (a.value?.data || []) : []);
+        setTerminatedSummary(t.status === 'fulfilled' ? (t.value?.data || null) : null);
+
+        if (results.every((r) => r.status === 'rejected')) {
+          setLoadError('Hisobot API javobi olinmadi');
+        } else if (results.some((r) => r.status === 'rejected')) {
+          setLoadError("Ba'zi hisobot endpointlari javob bermadi");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => { mounted = false; };
   }, []);
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
-  if (!summary) return <div className="empty" style={{ padding: 48 }}>Hisobotlar mavjud emas</div>;
+  if (loadError && !summary) return <div className="empty" style={{ padding: 48 }}>{loadError}</div>;
+
+  const safeSummary = summary || {};
 
   const maxRevenue = Math.max(1, ...dyn.map((d) => d.total_revenue || 0));
 
@@ -992,11 +1053,13 @@ export function ReportsScreen() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
-        <Stat label="Faol o'quvchilar" value={summary.active_students} icon={I.Users} />
-        <Stat label="Shu oy tushumi" value={`${fmt.format(summary.current_month_revenue || 0)} so'm`} tone="success" icon={I.TrendingUp} />
-        <Stat label="Qarzdorlik" value={`${fmt.format(summary.current_debt || 0)} so'm`} tone="danger" icon={I.AlertTriangle} />
-        <Stat label="Davomat" value={`${summary.attendance_rate || 0}%`} tone="navy" icon={I.Activity} />
+        <Stat label="Faol o'quvchilar" value={safeSummary.active_students || 0} icon={I.Users} />
+        <Stat label="Shu oy tushumi" value={`${fmt.format(safeSummary.current_month_revenue || 0)} so'm`} tone="success" icon={I.TrendingUp} />
+        <Stat label="Qarzdorlik" value={`${fmt.format(safeSummary.current_debt || 0)} so'm`} tone="danger" icon={I.AlertTriangle} />
+        <Stat label="Davomat" value={`${safeSummary.attendance_rate || 0}%`} tone="navy" icon={I.Activity} />
       </div>
+
+      {loadError && <div className="empty" style={{ marginBottom: 12 }}>{loadError}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
         <div className="card" style={{ padding: 16 }}>
