@@ -56,6 +56,24 @@
   --shadow-lg: 0 24px 60px -24px rgba(0,0,0,0.8);
 }
 
+/* Ensure form controls match dark surfaces in dark theme (override browsers/defaults) */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select,
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field textarea,
+[data-theme="dark"] .field select {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] select::placeholder {
+  color: var(--muted) !important;
+}
+
 [data-density="compact"] {
   --row-h: 40px;
   --cell-px: 12px;
