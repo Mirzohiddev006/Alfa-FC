@@ -139,16 +139,13 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
 
       {selectedGroup && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'grid', placeItems: 'center', background: 'rgba(11,20,38,0.5)' }}
           onClick={() => onCloseGroup?.()}
         >
-          {/* backdrop */}
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(11,20,38,0.45)' }} />
-
-          {/* drawer panel */}
+          {/* modal panel */}
           <div
             className="card"
-            style={{ position: 'relative', width: 520, maxWidth: '90vw', height: '100vh', overflowY: 'auto', borderRadius: '16px 0 0 16px', padding: 24, boxShadow: '-20px 0 60px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', gap: 20 }}
+            style={{ position: 'relative', width: 640, maxWidth: '92vw', maxHeight: '85vh', overflowY: 'auto', borderRadius: 16, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.28)', display: 'flex', flexDirection: 'column', gap: 20 }}
             onClick={e => e.stopPropagation()}
           >
             {/* header */}

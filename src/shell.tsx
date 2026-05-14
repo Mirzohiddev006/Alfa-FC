@@ -11,7 +11,6 @@ const NAV_ITEMS = [
     { id: 'students', label: "O'quvchilar", icon: 'Users', perm: 'students:view', badge: '84' },
     { id: 'groups', label: 'Guruhlar', icon: 'Group', perm: 'groups:view' },
     { id: 'sessions', label: 'Trening sessiyalari', icon: 'Calendar', perm: 'attendance:view' },
-    { id: 'attendance', label: 'Davomat belgilash', icon: 'Whistle', perm: 'attendance:coach:mark' },
     { id: 'performance', label: 'Natijaviy jadval', icon: 'Trophy', perm: 'sessions:manage' },
   ]},
   { section: 'Hujjat va moliya', items: [
