@@ -449,6 +449,7 @@ function StatCard({ label, value }) {
 
 export function SessionsScreen({ onMark }) {
   const I = Icon;
+  const todayIso = new Date().toISOString().slice(0, 10);
   const [activeTab, setActiveTab] = React.useState('sessions');
   const [sessions, setSessions] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
@@ -469,7 +470,6 @@ export function SessionsScreen({ onMark }) {
   const [bulkDays, setBulkDays] = React.useState([]);
   const [bulkForm, setBulkForm] = React.useState({ group_id: '', from_date: todayIso, to_date: todayIso, topic: '', start_time: '10:00', end_time: '11:00', station: '' });
   const [savingBulk, setSavingBulk] = React.useState(false);
-  const todayIso = new Date().toISOString().slice(0, 10);
   const [newSession, setNewSession] = React.useState({
     group_id: '',
     session_date: todayIso,
@@ -480,7 +480,7 @@ export function SessionsScreen({ onMark }) {
     description: '',
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso;
 
   React.useEffect(() => {
     setLoading(true);
