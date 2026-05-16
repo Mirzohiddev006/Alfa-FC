@@ -2553,14 +2553,8 @@ export function ReportsScreen() {
 
           {financeReport ? (
             <div className="card" style={{ padding: 16 }}>
-              <div className="card-title" style={{ marginBottom: 12 }}>Moliya hisoboti</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
-                {(financeReport.total_income !== undefined || financeReport.total_revenue !== undefined) && <Stat label="Jami daromad" value={`${fmt.format((financeReport.total_income || financeReport.total_revenue) || 0)} so'm`} tone="success" icon={I.TrendingUp} />}
-                {financeReport.total_paid !== undefined && <Stat label="To'langan" value={`${fmt.format(financeReport.total_paid || 0)} so'm`} tone="navy" icon={I.Check} />}
-                {financeReport.total_debt !== undefined && <Stat label="Qarz" value={`${fmt.format(financeReport.total_debt || 0)} so'm`} tone="danger" icon={I.AlertTriangle} />}
-              </div>
-              {financeReport.by_month && Array.isArray(financeReport.by_month) && financeReport.by_month.length > 0 && (
-                <div>
+              {false && financeReport.by_month && Array.isArray(financeReport.by_month) && financeReport.by_month.length > 0 && (
+                <div style={{ marginTop: 16 }}>
                   <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>OY BO'YICHA</div>
                   <table className="table">
                     <thead><tr><th>Oy</th><th style={{ textAlign: 'right' }}>Daromad</th><th style={{ textAlign: 'right' }}>Kutilgan</th></tr></thead>
@@ -2587,6 +2581,23 @@ export function ReportsScreen() {
                           <td>{b.source || '—'}</td>
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.format(b.total_amount || 0)} so'm</td>
                           <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{b.transaction_count || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {financeReport.by_month && Array.isArray(financeReport.by_month) && financeReport.by_month.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>OY BO'YICHA</div>
+                  <table className="table">
+                    <thead><tr><th>Oy</th><th style={{ textAlign: 'right' }}>Daromad</th><th style={{ textAlign: 'right' }}>Kutilgan</th></tr></thead>
+                    <tbody>
+                      {financeReport.by_month.map((m, i) => (
+                        <tr key={i}>
+                          <td>{m.month || m.period}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt.format(m.income || m.total_income || m.amount || 0)} so'm</td>
+                          <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{fmt.format(m.expected || 0)} so'm</td>
                         </tr>
                       ))}
                     </tbody>
