@@ -2477,7 +2477,12 @@ export function ReportsScreen() {
           {[
             { label: "Faol o'quvchilar", value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--text)' },
             { label: "Bugungi tushum", value: safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—', icon: I.TrendingUp, color: 'var(--success)' },
-            { label: "Qarzdorlar soni", value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)' },
+            {
+              label: "Qarzdorlar soni", value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)',
+              sub: (safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt) != null
+                ? `${fmt.format(safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt)} so'm jami qarz`
+                : null,
+            },
             { label: "Bugungi sessiyalar", value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy,#0F1F4D)' },
           ].map((item, idx, arr) => (
             <div key={item.label} style={{
@@ -2490,6 +2495,7 @@ export function ReportsScreen() {
                 <item.icon size={16} color={item.color} />
               </div>
               <div style={{ fontSize: 32, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{item.value}</div>
+              {item.sub && <div style={{ fontSize: 12, color: item.color, opacity: 0.7, marginTop: -4, fontVariantNumeric: 'tabular-nums' }}>{item.sub}</div>}
             </div>
           ))}
         </div>
@@ -2497,6 +2503,43 @@ export function ReportsScreen() {
 
       {tab === 'finance' && (
         <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
+            {[
+              {
+                label: "Jami daromad",
+                value: financeReport ? `${fmt.format(financeReport.total_income ?? financeReport.total_revenue ?? 0)} so'm` : (txStats ? `${fmt.format(txStats.total_paid || 0)} so'm` : '—'),
+                icon: I.TrendingUp, color: 'var(--success)',
+              },
+              {
+                label: "To'langan",
+                value: financeReport?.total_paid != null ? `${fmt.format(financeReport.total_paid)} so'm` : (txStats ? `${fmt.format(txStats.total_paid || 0)} so'm` : '—'),
+                icon: I.Check, color: 'var(--brand-navy,#0F1F4D)',
+              },
+              {
+                label: "Jami qarz",
+                value: financeReport?.total_debt != null ? `${fmt.format(financeReport.total_debt)} so'm` : '—',
+                icon: I.AlertTriangle, color: 'var(--brand-red)',
+              },
+              {
+                label: "Muvaffaqiyatli tranzaksiyalar",
+                value: txStats?.successful_transactions ?? '—',
+                icon: I.Wallet, color: 'var(--text)',
+              },
+            ].map((item, idx, arr) => (
+              <div key={item.label} style={{
+                padding: '20px 24px',
+                borderRight: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</span>
+                  <item.icon size={15} color={item.color} />
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
             <div className="field" style={{ margin: 0 }}>
               <label style={{ fontSize: 12 }}>Dan</label>
