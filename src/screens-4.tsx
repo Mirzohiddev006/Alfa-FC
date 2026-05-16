@@ -1790,6 +1790,9 @@ export function TransactionsScreen({ onToast } = {}) {
     comment: '', payment_year: new Date().getFullYear(), paid_at: '', proof_file: null,
   });
   const [manualSaving, setManualSaving] = React.useState(false);
+  const [manualContractMatches, setManualContractMatches] = React.useState([]);
+  const [manualContractLoading, setManualContractLoading] = React.useState(false);
+  const [manualContractError, setManualContractError] = React.useState('');
 
   const [assignTxId, setAssignTxId] = React.useState(null);
   const [assignForm, setAssignForm] = React.useState({ student_id: '', contract_id: '' });
@@ -1825,6 +1828,38 @@ export function TransactionsScreen({ onToast } = {}) {
   }
 
   React.useEffect(() => { loadData(); }, [scope, source, statusFilter, fromDate, toDate, paymentYear, page]);
+
+  React.useEffect(() => {
+    const query = manualForm.contract_number.trim();
+    if (!showManual || query.length < 2) {
+      setManualContractMatches([]);
+      setManualContractError('');
+      setManualContractLoading(false);
+      return;
+    }
+
+    let active = true;
+    setManualContractLoading(true);
+    setManualContractError('');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiGetContracts({ search: query, page_size: 8 });
+        if (!active) return;
+        setManualContractMatches(res?.data || []);
+      } catch (e) {
+        if (!active) return;
+        setManualContractMatches([]);
+        setManualContractError(e.message || 'Shartnoma topilmadi');
+      } finally {
+        if (active) setManualContractLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [showManual, manualForm.contract_number]);
 
   async function handleExport() {
     try {
@@ -2148,6 +2183,58 @@ export function TransactionsScreen({ onToast } = {}) {
               <div className="field" style={{ gridColumn: 'span 2' }}>
                 <label>Shartnoma raqami *</label>
                 <input value={manualForm.contract_number} onChange={e => setManualForm(p => ({ ...p, contract_number: e.target.value }))} placeholder="1-2026" />
+                {(manualContractLoading || manualContractError || manualContractMatches.length > 0 || manualForm.contract_number.trim().length >= 2) && (
+                  <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)', overflow: 'hidden' }}>
+                    {manualContractLoading && (
+                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--muted)' }}>Shartnoma qidirilmoqda...</div>
+                    )}
+                    {!manualContractLoading && manualContractError && (
+                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--brand-red)' }}>{manualContractError}</div>
+                    )}
+                    {!manualContractLoading && !manualContractError && manualContractMatches.length === 0 && manualForm.contract_number.trim().length >= 2 && (
+                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--muted)' }}>Mos shartnoma topilmadi</div>
+                    )}
+                    {!manualContractLoading && manualContractMatches.map((contract) => {
+                      const customerName = contract.custom_fields?.customer?.full_name || contract.customer_full_name || '';
+                      const studentName = contract.student
+                        ? `${contract.student.first_name || ''} ${contract.student.last_name || ''}`.trim()
+                        : (contract.student_name || contract.full_name || '');
+                      const displayName = studentName || customerName || `O'quvchi #${contract.student_id || '-'}`;
+                      return (
+                        <button
+                          key={contract.id}
+                          type="button"
+                          onClick={() => setManualForm(p => ({
+                            ...p,
+                            contract_number: contract.contract_number || p.contract_number,
+                            amount: p.amount || String(contract.monthly_fee || ''),
+                          }))}
+                          style={{
+                            width: '100%',
+                            border: 0,
+                            borderBottom: '1px solid var(--border)',
+                            background: 'transparent',
+                            color: 'var(--text)',
+                            padding: '9px 10px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                            <strong style={{ fontSize: 13 }}>{displayName}</strong>
+                            <span style={{ fontSize: 12, fontWeight: 700 }}>{contract.contract_number || '-'}</span>
+                          </div>
+                          <div style={{ marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--muted)' }}>
+                            {customerName && studentName && <span>Mijoz: {customerName}</span>}
+                            <span>O'quvchi ID: #{contract.student_id || '-'}</span>
+                            <span>{fmt.format(contract.monthly_fee || 0)} so'm</span>
+                            <span>{contract.status || '-'}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <div className="field">
                 <label>Summa (so'm) *</label>
