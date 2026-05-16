@@ -6,6 +6,9 @@ import {
   apiGetStudents, apiGetStudentFullInfo, apiGetStudentTransactions, apiGetStudentGateLogs,
   apiGetGroups, apiCreateStudent, apiGetStudentsComprehensiveExportUrl,
   apiImportStudents, apiGetStudentAttendanceReport, apiUpdateStudent,
+  apiDeleteStudent, apiDeleteStudentsBulk,
+  apiUploadStudentPhoto, apiUploadStudentPassport, apiUploadStudentExtraFile,
+  apiContractPdfUrl,
 } from './api';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -23,7 +26,7 @@ function calcAge(dateOfBirth) {
 
 function fullName(s) { return `${s.first_name} ${s.last_name}`; }
 
-export function StudentsList({ onOpen, onNew }) {
+export function StudentsList({ onOpen, onNew, onToast }) {
   const I = Icon;
   const [students, setStudents] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
@@ -33,22 +36,43 @@ export function StudentsList({ onOpen, onNew }) {
   const [groupId, setGroupId] = React.useState('all');
   const [selected, setSelected] = React.useState([]);
   const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalCount, setTotalCount] = React.useState(0);
   const [showImport, setShowImport] = React.useState(false);
   const [importFile, setImportFile] = React.useState(null);
   const [importing, setImporting] = React.useState(false);
+  const [bulkDeleting, setBulkDeleting] = React.useState(false);
   const [openMenuStudentId, setOpenMenuStudentId] = React.useState(null);
   const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
   const PAGE_SIZE = 30;
 
+  async function loadStudents(overrides = {}) {
+    setLoading(true);
+    try {
+      const params = { page, page_size: PAGE_SIZE };
+      if (q) params.search = q;
+      if (status !== 'all') params.status = status;
+      if (groupId !== 'all') params.group_id = groupId;
+      Object.assign(params, overrides);
+      const res = await apiGetStudents(params);
+      setStudents(res?.data || []);
+      setTotalPages(res?.meta?.total_pages || 1);
+      setTotalCount(res?.meta?.total || 0);
+    } catch {} finally {
+      setLoading(false);
+    }
+  }
+
   React.useEffect(() => {
-    Promise.all([
-      apiGetStudents({ page_size: 200 }),
-      apiGetGroups({ page_size: 100 }),
-    ]).then(([sRes, gRes]) => {
-      setStudents(sRes?.data || []);
-      setGroups(gRes?.data || []);
-    }).catch(() => {}).finally(() => setLoading(false));
+    apiGetGroups({ page_size: 100 }).then(res => setGroups(res?.data || [])).catch(() => {});
   }, []);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => { setPage(1); loadStudents({ page: 1 }); }, q ? 400 : 0);
+    return () => clearTimeout(timer);
+  }, [q, status, groupId]);
+
+  React.useEffect(() => { loadStudents(); }, [page]);
 
   React.useEffect(() => {
     const closeMenu = () => setOpenMenuStudentId(null);
@@ -62,22 +86,36 @@ export function StudentsList({ onOpen, onNew }) {
     return m;
   }, [groups]);
 
-  const filtered = students.filter(s => {
-    if (status !== 'all' && s.status !== status) return false;
-    if (groupId !== 'all' && String(s.group_id) !== groupId) return false;
-    if (q) {
-      const name = fullName(s).toLowerCase();
-      const qLow = q.toLowerCase();
-      if (!name.includes(qLow) && !(s.phone || '').includes(q) && !(s.pnfl || '').includes(q)) return false;
+  const allSelected = students.length > 0 && students.every(s => selected.includes(s.id));
+
+  async function handleDeleteStudent(id) {
+    if (!confirm("O'quvchini o'chirasizmi? (status DELETED ga o'zgaradi)")) return;
+    try {
+      await apiDeleteStudent(id);
+      setSelected(prev => prev.filter(x => x !== id));
+      setOpenMenuStudentId(null);
+      onToast?.("O'quvchi o'chirildi");
+      loadStudents();
+    } catch (e) {
+      onToast?.('Xatolik: ' + e.message);
     }
-    return true;
-  });
+  }
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const allSelected = paginated.length > 0 && paginated.every(s => selected.includes(s.id));
-
-  React.useEffect(() => { setPage(1); }, [q, status, groupId]);
+  async function handleBulkDelete() {
+    if (selected.length === 0) return;
+    if (!confirm(`${selected.length} ta o'quvchini o'chirasizmi?`)) return;
+    setBulkDeleting(true);
+    try {
+      await apiDeleteStudentsBulk(selected);
+      setSelected([]);
+      onToast?.(`${selected.length} ta o'quvchi o'chirildi`);
+      loadStudents();
+    } catch (e) {
+      onToast?.('Xatolik: ' + e.message);
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
 
   async function handleExport() {
     try {
@@ -98,31 +136,30 @@ export function StudentsList({ onOpen, onNew }) {
       setShowImport(false);
       setImportFile(null);
       setSelected([]);
-      await Promise.all([
-        apiGetStudents({ page_size: 200 }),
-        apiGetGroups({ page_size: 100 }),
-      ]).then(([sRes, gRes]) => {
-        setStudents(sRes?.data || []);
-        setGroups(gRes?.data || []);
-      });
-      alert('Import muvaffaqiyatli bajarildi');
+      loadStudents();
+      onToast?.('Import muvaffaqiyatli bajarildi');
     } catch (e) {
-      alert('Import xatoligi: ' + e.message);
+      onToast?.('Import xatoligi: ' + e.message);
     } finally {
       setImporting(false);
     }
   }
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (loading && students.length === 0) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
   return (
     <div>
       <div className="page-head">
         <div>
           <h1 className="page-title">O'quvchilar</h1>
-          <div className="page-sub">Akademiyaning barcha o'quvchilari · jami {students.length} ta</div>
+          <div className="page-sub">Akademiyaning barcha o'quvchilari · jami {totalCount} ta</div>
         </div>
         <div className="page-actions">
+          {selected.length > 0 && (
+            <button className="btn danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
+              <I.Trash2 size={14}/> {bulkDeleting ? "O'chirilmoqda..." : `${selected.length} ta o'chirish`}
+            </button>
+          )}
           <button className="btn" onClick={() => setShowImport(true)}><I.Upload size={15}/> Import</button>
           <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel export</button>
           <button className="btn primary" onClick={onNew}><I.UserPlus size={15}/> Yangi o'quvchi</button>
@@ -133,21 +170,22 @@ export function StudentsList({ onOpen, onNew }) {
         <div className="table-toolbar">
           <div className="search" style={{ maxWidth: 320 }}>
             <span className="icon-l"><I.Search size={15}/></span>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ism, telefon yoki PNFL..."/>
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ism, telefon, PNFL yoki manzil..."/>
           </div>
-          <select value={status} onChange={e => setStatus(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
+          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             <option value="all">Barcha statuslar</option>
             <option value="active">Faol</option>
             <option value="inactive">Nofaol</option>
             <option value="archived">Arxiv</option>
           </select>
-          <select value={groupId} onChange={e => setGroupId(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
+          <select value={groupId} onChange={e => { setGroupId(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             <option value="all">Barcha guruhlar</option>
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 12.5 }}>
             {selected.length > 0 && <span style={{ color: 'var(--text)', fontWeight: 600 }}>{selected.length} tanlangan</span>}
-            <span>{filtered.length} natija</span>
+            {loading && <span>Yuklanmoqda...</span>}
+            <span>{totalCount} natija</span>
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
@@ -166,7 +204,10 @@ export function StudentsList({ onOpen, onNew }) {
               </tr>
             </thead>
             <tbody>
-              {paginated.map(s => {
+              {students.length === 0 && !loading && (
+                <tr><td colSpan={7} style={{ padding: 24, color: 'var(--muted)', textAlign: 'center' }}>O'quvchi topilmadi</td></tr>
+              )}
+              {students.map(s => {
                 const name = fullName(s);
                 const age = calcAge(s.date_of_birth);
                 const grpName = groupMap[s.group_id] || '—';
@@ -199,14 +240,17 @@ export function StudentsList({ onOpen, onNew }) {
                           setOpenMenuStudentId(null);
                         } else {
                           const rect = e.currentTarget.getBoundingClientRect();
-                          setMenuPos({ x: rect.right - 140, y: rect.bottom + 4 });
+                          setMenuPos({ x: rect.right - 160, y: rect.bottom + 4 });
                           setOpenMenuStudentId(s.id);
                         }
                       }}><I.More size={16}/></button>
                       {openMenuStudentId === s.id && (
-                        <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 140, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
-                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpen(s.id); setOpenMenuStudentId(null); }}>
+                        <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 160, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
+                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => { onOpen(s.id); setOpenMenuStudentId(null); }}>
                             <I.Eye size={14} /> Ochish
+                          </button>
+                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => handleDeleteStudent(s.id)}>
+                            <I.Trash2 size={14} /> O'chirish
                           </button>
                         </div>
                       )}
@@ -218,14 +262,18 @@ export function StudentsList({ onOpen, onNew }) {
           </table>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: '1px solid var(--border)', fontSize: 12.5, color: 'var(--muted)' }}>
-          <span>{filtered.length === 0 ? '0 natija' : `${(page-1)*PAGE_SIZE+1} — ${Math.min(page*PAGE_SIZE, filtered.length)} / ${filtered.length}`}</span>
+          <span>{totalCount === 0 ? '0 natija' : `${(page-1)*PAGE_SIZE+1} — ${Math.min(page*PAGE_SIZE, totalCount)} / ${totalCount}`}</span>
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="btn sm ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><I.ChevronLeft size={14}/></button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
-              <button key={p} className={'btn sm ' + (page === p ? '' : 'ghost')}
-                style={{ minWidth: 32, justifyContent: 'center', ...(page === p ? { background: 'var(--brand-navy)', color: 'white', borderColor: 'var(--brand-navy)' } : {}) }}
-                onClick={() => setPage(p)}>{p}</button>
-            ))}
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const p = Math.max(1, page - 2) + i;
+              if (p > totalPages) return null;
+              return (
+                <button key={p} className={'btn sm ' + (page === p ? '' : 'ghost')}
+                  style={{ minWidth: 32, justifyContent: 'center', ...(page === p ? { background: 'var(--brand-navy)', color: 'white', borderColor: 'var(--brand-navy)' } : {}) }}
+                  onClick={() => setPage(p)}>{p}</button>
+              );
+            })}
             <button className="btn sm ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}><I.ChevronRight size={14}/></button>
           </div>
         </div>
@@ -268,6 +316,7 @@ export function StudentProfile({ studentId, onBack }) {
   const [editForm, setEditForm] = React.useState({});
   const [editLoading, setEditLoading] = React.useState(false);
   const [editError, setEditError] = React.useState('');
+  const [uploadingFile, setUploadingFile] = React.useState(null);
 
   React.useEffect(() => {
     if (!studentId) return;
@@ -483,8 +532,11 @@ export function StudentProfile({ studentId, onBack }) {
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                <button className="btn"><I.Download size={14}/> PDF yuklab olish</button>
-                <button className="btn ghost"><I.Edit size={14}/> Tahrirlash</button>
+                {contract && (
+                  <button className="btn" onClick={() => window.open(apiContractPdfUrl(contract.id), '_blank')}>
+                    <I.Download size={14}/> PDF yuklab olish
+                  </button>
+                )}
               </div>
             </div>
             <div>
@@ -533,18 +585,20 @@ export function StudentProfile({ studentId, onBack }) {
         {tab === 'gatelogs' && (
           <div style={{ padding: 22 }}>
             {gateLogs.length === 0 && <div className="empty">Hech qanday log topilmadi</div>}
-            {gateLogs.slice(0, 20).map(log => (
+            {gateLogs.slice(0, 30).map(log => (
               <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: log.direction === 'in' ? 'var(--success-soft)' : 'var(--accent-soft)',
-                  color: log.direction === 'in' ? 'var(--success)' : 'var(--brand-red)' }}>
-                  {log.direction === 'in' ? <I.Login size={15}/> : <I.Logout size={15}/>} 
+                  background: log.allowed ? 'var(--success-soft)' : 'var(--accent-soft)',
+                  color: log.allowed ? 'var(--success)' : 'var(--brand-red)' }}>
+                  {log.allowed ? <I.Check size={15}/> : <I.X size={15}/>}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>{log.direction === 'in' ? 'Kirish' : 'Chiqish'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>{log.method === 'face' ? 'Yuz aniqlash' : "Qo'lda kiritish"} · {log.allowed ? 'ruxsat berildi' : 'rad etildi'}</div>
+                  <div style={{ fontWeight: 600 }}>{log.allowed ? 'Ruxsat berildi' : 'Rad etildi'}</div>
+                  {log.reason && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{log.reason}</div>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{log.timestamp}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                  {log.gate_timestamp ? log.gate_timestamp.slice(0, 16).replace('T', ' ') : '—'}
+                </div>
               </div>
             ))}
           </div>
@@ -553,21 +607,49 @@ export function StudentProfile({ studentId, onBack }) {
         {tab === 'files' && (
           <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
-              { name: 'Profil rasmi', url: s.photo_url, icon: 'Camera', size: s.photo_url ? 'Mavjud' : "Yo'q" },
-              { name: 'Pasport nusxasi', url: s.passport_url, icon: 'File', size: s.passport_url ? 'Mavjud' : "Yo'q" },
-              { name: "Qo'shimcha fayl", url: s.extra_file_url, icon: 'FileText', size: s.extra_file_url ? 'Mavjud' : "Yo'q" },
-            ].map((f, i) => {
+              { name: 'Profil rasmi', urlKey: 'photo_url', icon: 'Camera', apiKey: 'photo', accept: 'image/*', uploadFn: apiUploadStudentPhoto },
+              { name: 'Pasport nusxasi', urlKey: 'passport_url', icon: 'File', apiKey: 'passport', accept: 'image/*,.pdf', uploadFn: apiUploadStudentPassport },
+              { name: "Qo'shimcha fayl", urlKey: 'extra_file_url', icon: 'FileText', apiKey: 'extra_file', accept: '*', uploadFn: apiUploadStudentExtraFile },
+            ].map((f) => {
               const Ic = I[f.icon];
+              const url = s[f.urlKey];
+              const uploading = uploadingFile === f.apiKey;
               return (
-                <div key={i} style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 8, background: f.url ? 'var(--success-soft)' : 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: f.url ? 'var(--success)' : 'var(--muted)' }}>
-                    <Ic size={20}/>
+                <div key={f.apiKey} style={{ padding: 16, border: '1px solid var(--border)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 8, background: url ? 'var(--success-soft)' : 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: url ? 'var(--success)' : 'var(--muted)', flexShrink: 0 }}>
+                      <Ic size={20}/>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{f.name}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{url ? 'Mavjud' : "Yo'q"}</div>
+                    </div>
+                    {url && (
+                      <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => window.open(url, '_blank')} title="Yuklab olish">
+                        <I.Download size={13}/>
+                      </button>
+                    )}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{f.name}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{f.size}</div>
-                  </div>
-                  {f.url && <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => window.open(f.url, '_blank')}><I.Download size={13}/></button>}
+                  <label className="btn ghost sm" style={{ cursor: uploading ? 'not-allowed' : 'pointer', justifyContent: 'center', opacity: uploading ? 0.6 : 1 }}>
+                    {uploading ? 'Yuklanmoqda...' : <><I.Upload size={13}/> {url ? "Qayta yuklash" : "Yuklash"}</>}
+                    <input type="file" style={{ display: 'none' }} accept={f.accept} disabled={uploading} onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingFile(f.apiKey);
+                      try {
+                        const fd = new FormData();
+                        fd.append(f.apiKey, file);
+                        await f.uploadFn(studentId, fd);
+                        const infoRes = await apiGetStudentFullInfo(studentId);
+                        setInfo(infoRes?.data || null);
+                      } catch (err) {
+                        alert('Xatolik: ' + err.message);
+                      } finally {
+                        setUploadingFile(null);
+                        e.target.value = '';
+                      }
+                    }}/>
+                  </label>
                 </div>
               );
             })}
@@ -709,7 +791,7 @@ export function StudentNew({ onBack, onCreated }) {
       const contractFields = ['customer_full_name', 'customer_passport_number', 'customer_address', 'monthly_fee_amount', 'uniform_fee_amount', 'contract_start_date', 'contract_end_date'];
       contractFields.forEach(k => { if (form[k]) fd.append(k, form[k]); });
       if (files.photo) fd.append('photo', files.photo);
-      if (files.passport) fd.append('passport_file', files.passport);
+      if (files.passport) fd.append('passport', files.passport);
       if (files.extra_file) fd.append('extra_file', files.extra_file);
       await apiCreateStudent(fd);
       onCreated?.();

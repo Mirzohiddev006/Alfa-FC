@@ -3,10 +3,13 @@ import React from 'react';
 import { Icon } from './icons';
 import { MOCK } from './data';
 import {
-  apiGetGroups, apiGetHeadCoachGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup,
+  apiGetGroups, apiGetHeadCoachGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup, apiDeleteGroup, apiDeleteGroupsBulk,
   apiGetSessions, apiGetSessionDetails, apiGetCoachSessionDetails, apiCreateSession,
+  apiUpdateSession, apiDeleteSession, apiCreateHeadCoachSessionsBulk,
   apiGetCoaches, apiGetGroupStudentsExportUrl, apiDownloadCoachGroupPerformanceTableExport,
   apiMarkAttendance, apiMarkBulkAttendance, apiAddPerformanceTableMatch,
+  apiSaveCoachGroupPerformanceTable, apiDeleteCoachPerformanceTableColumn, apiUpdateCoachPerformanceTableColumn,
+  apiUploadCoachSessionKonspekt, apiGetCoachMyAttendances,
 } from './api';
 import { useCoachGroupsQuery, useGroupPerformanceTableQuery } from './features/performance-table/model/use-performance-table';
 
@@ -26,12 +29,27 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
   const [coaches, setCoaches] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [view, setView] = React.useState('cards');
+  const [includeArchived, setIncludeArchived] = React.useState(false);
+
+  // new group
   const [showNew, setShowNew] = React.useState(false);
   const [newGroup, setNewGroup] = React.useState({ name: '', description: '', coach_id: '' });
   const [saving, setSaving] = React.useState(false);
+
+  // edit group
+  const [editingGroup, setEditingGroup] = React.useState(null);
+  const [editForm, setEditForm] = React.useState({ name: '', description: '', coach_id: '' });
+
+  // bulk select
+  const [selectedIds, setSelectedIds] = React.useState([]);
+  const [bulkDeleting, setBulkDeleting] = React.useState(false);
+
+  // group detail
   const [groupDetail, setGroupDetail] = React.useState(null);
   const [groupStudents, setGroupStudents] = React.useState([]);
   const [groupLoading, setGroupLoading] = React.useState(false);
+
+  // context menu (list view)
   const [openMenuGroupId, setOpenMenuGroupId] = React.useState(null);
   const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
 
@@ -39,11 +57,12 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
     setLoading(true);
     try {
       const [gRes, cRes] = await Promise.all([
-        apiGetGroups({ page_size: 100 }),
+        apiGetGroups({ page_size: 100, include_archived: includeArchived }),
         apiGetCoaches(),
       ]);
       setGroups(gRes?.data || []);
       setCoaches(cRes?.data || []);
+      setSelectedIds([]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -51,7 +70,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
     }
   }
 
-  React.useEffect(() => { loadData(); }, []);
+  React.useEffect(() => { loadData(); }, [includeArchived]);
 
   React.useEffect(() => {
     const closeMenu = () => setOpenMenuGroupId(null);
@@ -60,17 +79,9 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
   }, []);
 
   React.useEffect(() => {
-    if (!selectedGroupId) {
-      setGroupDetail(null);
-      setGroupStudents([]);
-      return;
-    }
-
+    if (!selectedGroupId) { setGroupDetail(null); setGroupStudents([]); return; }
     setGroupLoading(true);
-    Promise.all([
-      apiGetGroup(selectedGroupId),
-      apiGetGroupStudents(selectedGroupId),
-    ])
+    Promise.all([apiGetGroup(selectedGroupId), apiGetGroupStudents(selectedGroupId)])
       .then(([gRes, sRes]) => {
         setGroupDetail(gRes?.data || null);
         setGroupStudents(sRes?.data || []);
@@ -78,18 +89,6 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
       .catch(() => {})
       .finally(() => setGroupLoading(false));
   }, [selectedGroupId]);
-
-  async function handleExport() {
-    try {
-      const groupId = groups[0]?.id;
-      if (!groupId) return;
-      const url = await apiGetGroupStudentsExportUrl(groupId);
-      if (!url) return;
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (e) {
-      alert('Export ochilmadi: ' + e.message);
-    }
-  }
 
   const coachMap = React.useMemo(() => {
     const m = {};
@@ -110,9 +109,76 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
       setNewGroup({ name: '', description: '', coach_id: '' });
       await loadData();
     } catch (e) {
-      console.error(e);
+      alert("Guruh yaratilmadi: " + e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function openEdit(g) {
+    setEditingGroup(g);
+    setEditForm({ name: g.name || '', description: g.description || '', coach_id: String(g.coach_id || '') });
+    setOpenMenuGroupId(null);
+  }
+
+  async function handleEditGroup() {
+    if (!editForm.name.trim() || !editingGroup) return;
+    setSaving(true);
+    try {
+      await apiUpdateGroup(editingGroup.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || undefined,
+        coach_id: editForm.coach_id ? Number(editForm.coach_id) : undefined,
+      });
+      setEditingGroup(null);
+      await loadData();
+    } catch (e) {
+      alert('Yangilanmadi: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteGroup(g) {
+    if (!window.confirm(`"${g.name}" guruhini o'chirmoqchimisiz?`)) return;
+    try {
+      await apiDeleteGroup(g.id);
+      setOpenMenuGroupId(null);
+      await loadData();
+    } catch (e) {
+      alert("O'chirishda xatolik: " + e.message);
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`${selectedIds.length} ta guruhni o'chirmoqchimisiz?`)) return;
+    setBulkDeleting(true);
+    try {
+      await apiDeleteGroupsBulk(selectedIds);
+      setSelectedIds([]);
+      await loadData();
+    } catch (e) {
+      alert("O'chirishda xatolik: " + e.message);
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function toggleAll() {
+    setSelectedIds(prev => prev.length === groups.length ? [] : groups.map(g => g.id));
+  }
+
+  async function handleExport(groupId) {
+    try {
+      const url = apiGetGroupStudentsExportUrl(groupId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      alert('Export ochilmadi: ' + e.message);
     }
   }
 
@@ -120,35 +186,55 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
 
   const selectedGroup = groupDetail || groups.find(g => g.id === selectedGroupId) || null;
 
+  const GroupFormFields = ({ form, setForm }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="field">
+        <label>Guruh nomi <span className="req">*</span></label>
+        <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Masalan: Alpha-2012" />
+      </div>
+      <div className="field">
+        <label>Tavsif</label>
+        <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Qisqacha ma'lumot" />
+      </div>
+      <div className="field">
+        <label>Murabbiy</label>
+        <select value={form.coach_id} onChange={e => setForm(p => ({ ...p, coach_id: e.target.value }))}>
+          <option value="">Tanlanmagan</option>
+          {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <div className="page-head">
         <div>
           <h1 className="page-title">Guruhlar</h1>
-          <div className="page-sub">{groups.length} ta faol guruh</div>
+          <div className="page-sub">{groups.length} ta guruh</div>
         </div>
         <div className="page-actions">
+          {selectedIds.length > 0 && (
+            <button className="btn ghost" style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }} onClick={handleBulkDelete} disabled={bulkDeleting}>
+              <I.Trash size={14}/> {bulkDeleting ? "O'chirilmoqda..." : `${selectedIds.length} ta o'chirish`}
+            </button>
+          )}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }}>
+            <input type="checkbox" checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} />
+            Arxivlanganlar
+          </label>
           <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 2 }}>
             <button className={'btn sm ' + (view === 'cards' ? '' : 'ghost')} style={{ height: 30, border: 'none', background: view === 'cards' ? 'var(--selected)' : 'transparent' }} onClick={() => setView('cards')}>Kartochkalar</button>
             <button className={'btn sm ' + (view === 'list' ? '' : 'ghost')} style={{ height: 30, border: 'none', background: view === 'list' ? 'var(--selected)' : 'transparent' }} onClick={() => setView('list')}>Ro'yxat</button>
           </div>
-          <button className="btn" onClick={handleExport}><I.Download size={15}/> Export</button>
           <button className="btn primary" onClick={() => setShowNew(true)}><I.Plus size={15}/> Yangi guruh</button>
         </div>
       </div>
 
+      {/* Group detail modal */}
       {selectedGroup && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'grid', placeItems: 'center', background: 'rgba(11,20,38,0.5)' }}
-          onClick={() => onCloseGroup?.()}
-        >
-          {/* modal panel */}
-          <div
-            className="card"
-            style={{ position: 'relative', width: 640, maxWidth: '92vw', maxHeight: '85vh', overflowY: 'auto', borderRadius: 16, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.28)', display: 'flex', flexDirection: 'column', gap: 20 }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* header */}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'grid', placeItems: 'center', background: 'rgba(11,20,38,0.5)' }} onClick={() => onCloseGroup?.()}>
+          <div className="card" style={{ position: 'relative', width: 640, maxWidth: '92vw', maxHeight: '85vh', overflowY: 'auto', borderRadius: 16, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.28)', display: 'flex', flexDirection: 'column', gap: 20 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
@@ -158,12 +244,19 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                 <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{selectedGroup.name}</h2>
                 <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 13 }}>{selectedGroup.description || "Tavsif yo'q"}</div>
               </div>
-              <button className="icon-btn" style={{ width: 32, height: 32, flexShrink: 0 }} onClick={() => onCloseGroup?.()}>
-                <I.X size={16} />
-              </button>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button className="btn ghost sm" onClick={() => { onCloseGroup?.(); openEdit(selectedGroup); }}>
+                  <I.Edit size={13}/> Tahrirlash
+                </button>
+                <button className="btn ghost sm" onClick={() => handleExport(selectedGroup.id)}>
+                  <I.Download size={13}/> Export
+                </button>
+                <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => onCloseGroup?.()}>
+                  <I.X size={16}/>
+                </button>
+              </div>
             </div>
 
-            {/* stats */}
             {groupLoading ? (
               <div className="empty" style={{ padding: 20 }}>Yuklanmoqda...</div>
             ) : (
@@ -171,11 +264,10 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                 <StatCard label="Murabbiy" value={selectedGroup.coach_name || coachMap[selectedGroup.coach_id] || '—'} />
                 <StatCard label="Imkoniyat" value={selectedGroup.capacity ?? '—'} />
                 <StatCard label="Faol o'quvchi" value={selectedGroup.active_students_count ?? groupStudents.filter(s => s.status === 'active').length} />
-                <StatCard label="Jami o'quvchi" value={groupStudents.length} />
+                <StatCard label="Kutish ro'yxati" value={selectedGroup.waiting_list_count ?? '—'} />
               </div>
             )}
 
-            {/* students list */}
             <div>
               <div className="card-title" style={{ marginBottom: 10 }}>Guruhdagi o'quvchilar</div>
               {groupStudents.length === 0 ? (
@@ -201,22 +293,27 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
         </div>
       )}
 
+      {/* Cards view */}
       {view === 'cards' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
           {groups.map(g => {
             const coachName = coachMap[g.coach_id] || '—';
             const count = g.active_students_count ?? 0;
+            const isSelected = selectedIds.includes(g.id);
             return (
-              <div key={g.id} className="card" style={{ padding: 16, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 12 }} onClick={() => onOpen && onOpen(g.id)}>
+              <div key={g.id} className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12, outline: isSelected ? '2px solid var(--accent)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div>
-                    {g.description && <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{g.description}</div>}
-                    <div style={{ fontSize: 16, fontWeight: 700, marginTop: g.description ? 4 : 0 }}>{g.name}</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', flex: 1 }} onClick={() => onOpen && onOpen(g.id)}>
+                    <input type="checkbox" checked={isSelected} onClick={e => e.stopPropagation()} onChange={() => toggleSelect(g.id)} style={{ marginTop: 3, flexShrink: 0 }} />
+                    <div>
+                      {g.description && <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{g.description}</div>}
+                      <div style={{ fontSize: 16, fontWeight: 700, marginTop: g.description ? 4 : 0 }}>{g.name}</div>
+                    </div>
                   </div>
                   <span className="chip success"><span className="chip-dot"></span>Faol</span>
                 </div>
                 {g.coach_id && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onOpen && onOpen(g.id)}>
                     <div className="avatar sm" style={{ background: 'var(--brand-navy)' }}>
                       {coachName.split(' ').map(p => p[0]).slice(0, 2).join('')}
                     </div>
@@ -226,10 +323,12 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
                     </div>
                   </div>
                 )}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                    <span style={{ color: 'var(--muted)' }}>Faol o'quvchilar</span>
-                    <span style={{ fontWeight: 600 }}>{count}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, alignItems: 'center' }}>
+                  <span style={{ color: 'var(--muted)' }}>Faol o'quvchilar: <strong style={{ color: 'var(--text)' }}>{count}</strong></span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="icon-btn" style={{ width: 28, height: 28 }} title="Tahrirlash" onClick={() => openEdit(g)}><I.Edit size={13}/></button>
+                    <button className="icon-btn" style={{ width: 28, height: 28 }} title="Export" onClick={() => handleExport(g.id)}><I.Download size={13}/></button>
+                    <button className="icon-btn" style={{ width: 28, height: 28, color: 'var(--brand-red)' }} title="O'chirish" onClick={() => handleDeleteGroup(g)}><I.Trash size={13}/></button>
                   </div>
                 </div>
               </div>
@@ -238,36 +337,55 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
         </div>
       )}
 
+      {/* List view */}
       {view === 'list' && (
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>Guruh</th><th>Tavsif</th><th>Murabbiy</th><th>O'quvchilar</th><th>Status</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}>
+                  <input type="checkbox" checked={selectedIds.length === groups.length && groups.length > 0} onChange={toggleAll} />
+                </th>
+                <th>Guruh</th><th>Tavsif</th><th>Murabbiy</th><th>O'quvchilar</th><th>Kutish</th><th>Status</th><th></th>
+              </tr>
+            </thead>
             <tbody>
               {groups.map(g => {
                 const coachName = coachMap[g.coach_id] || '—';
+                const isSelected = selectedIds.includes(g.id);
                 return (
-                  <tr key={g.id} onClick={() => onOpen && onOpen(g.id)}>
-                    <td style={{ fontWeight: 600 }}>{g.name}</td>
+                  <tr key={g.id} style={{ background: isSelected ? 'var(--selected)' : undefined }}>
+                    <td onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(g.id)} />
+                    </td>
+                    <td style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => onOpen && onOpen(g.id)}>{g.name}</td>
                     <td style={{ color: 'var(--muted)' }}>{g.description || '—'}</td>
                     <td>{coachName}</td>
                     <td style={{ fontVariantNumeric: 'tabular-nums' }}>{g.active_students_count ?? '—'}</td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--muted)' }}>{g.waiting_list_count ?? '—'}</td>
                     <td><span className="chip success">Faol</span></td>
-                    <td style={{ position: 'relative' }}>
+                    <td style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                       <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
-                        e.stopPropagation();
-                        if (openMenuGroupId === g.id) {
-                          setOpenMenuGroupId(null);
-                        } else {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setMenuPos({ x: rect.right - 140, y: rect.bottom + 4 });
-                          setOpenMenuGroupId(g.id);
-                        }
+                        if (openMenuGroupId === g.id) { setOpenMenuGroupId(null); return; }
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMenuPos({ x: rect.right - 160, y: rect.bottom + 4 });
+                        setOpenMenuGroupId(g.id);
                       }}><I.More size={15}/></button>
                       {openMenuGroupId === g.id && (
-                        <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 140, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
-                          <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => { onOpen?.(g.id); setOpenMenuGroupId(null); }}>
-                            <I.Eye size={14} /> Ko'rish
-                          </button>
+                        <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 160, top: menuPos.y, left: menuPos.x }}>
+                          {[
+                            { icon: 'Eye', label: "Ko'rish", action: () => { onOpen?.(g.id); setOpenMenuGroupId(null); } },
+                            { icon: 'Edit', label: 'Tahrirlash', action: () => openEdit(g) },
+                            { icon: 'Download', label: 'Export', action: () => { handleExport(g.id); setOpenMenuGroupId(null); } },
+                            { icon: 'Trash', label: "O'chirish", action: () => { setOpenMenuGroupId(null); handleDeleteGroup(g); }, danger: true },
+                          ].map(item => {
+                            const Ic = I[item.icon];
+                            return (
+                              <button key={item.label} style={{ width: '100%', padding: '9px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: item.danger ? 'var(--brand-red)' : 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={item.action}>
+                                <Ic size={14}/> {item.label}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </td>
@@ -279,27 +397,38 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
         </div>
       )}
 
+      {/* New group modal */}
       {showNew && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowNew(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }} onClick={() => setShowNew(false)}>
           <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Yangi guruh</h3>
               <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setShowNew(false)}><I.X size={16}/></button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div className="field"><label>Guruh nomi <span className="req">*</span></label><input value={newGroup.name} onChange={e => setNewGroup(p => ({ ...p, name: e.target.value }))} placeholder="Masalan: Alpha-2012"/></div>
-              <div className="field"><label>Tavsif</label><input value={newGroup.description} onChange={e => setNewGroup(p => ({ ...p, description: e.target.value }))} placeholder="Qisqacha ma'lumot"/></div>
-              <div className="field"><label>Murabbiy</label>
-                <select value={newGroup.coach_id} onChange={e => setNewGroup(p => ({ ...p, coach_id: e.target.value }))}>
-                  <option value="">Tanlanmagan</option>
-                  {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-                </select>
-              </div>
-            </div>
+            <GroupFormFields form={newGroup} setForm={setNewGroup} />
             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
               <button className="btn ghost" onClick={() => setShowNew(false)}>Bekor</button>
               <button className="btn primary" onClick={handleCreateGroup} disabled={saving}>
                 <I.Check size={14}/> {saving ? 'Saqlanmoqda...' : "Qo'shish"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit group modal */}
+      {editingGroup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }} onClick={() => setEditingGroup(null)}>
+          <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Guruhni tahrirlash</h3>
+              <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setEditingGroup(null)}><I.X size={16}/></button>
+            </div>
+            <GroupFormFields form={editForm} setForm={setEditForm} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button className="btn ghost" onClick={() => setEditingGroup(null)}>Bekor</button>
+              <button className="btn primary" onClick={handleEditGroup} disabled={saving}>
+                <I.Check size={14}/> {saving ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
             </div>
           </div>
@@ -320,6 +449,7 @@ function StatCard({ label, value }) {
 
 export function SessionsScreen({ onMark }) {
   const I = Icon;
+  const [activeTab, setActiveTab] = React.useState('sessions');
   const [sessions, setSessions] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -327,6 +457,18 @@ export function SessionsScreen({ onMark }) {
   const [selectedDate, setSelectedDate] = React.useState('');
   const [showCreate, setShowCreate] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [myAttendances, setMyAttendances] = React.useState([]);
+  const [attendancesLoading, setAttendancesLoading] = React.useState(false);
+  const [attGroupFilter, setAttGroupFilter] = React.useState('');
+  const [groupFilter, setGroupFilter] = React.useState('');
+  const [openMenuSessionId, setOpenMenuSessionId] = React.useState(null);
+  const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
+  const [editingSession, setEditingSession] = React.useState(null);
+  const [editForm, setEditForm] = React.useState({ group_id: '', session_date: '', topic: '', start_time: '', end_time: '', station: '', description: '' });
+  const [showBulkCreate, setShowBulkCreate] = React.useState(false);
+  const [bulkDays, setBulkDays] = React.useState([]);
+  const [bulkForm, setBulkForm] = React.useState({ group_id: '', from_date: todayIso, to_date: todayIso, topic: '', start_time: '10:00', end_time: '11:00', station: '' });
+  const [savingBulk, setSavingBulk] = React.useState(false);
   const todayIso = new Date().toISOString().slice(0, 10);
   const [newSession, setNewSession] = React.useState({
     group_id: '',
@@ -341,14 +483,34 @@ export function SessionsScreen({ onMark }) {
   const today = new Date().toISOString().slice(0, 10);
 
   React.useEffect(() => {
+    setLoading(true);
+    const params = {};
+    if (groupFilter) params.group_id = groupFilter;
     Promise.all([
-      apiGetSessions(),
+      apiGetSessions(params),
       apiGetHeadCoachGroups(),
     ]).then(([sRes, gRes]) => {
       setSessions(sRes?.data || []);
       setGroups(gRes?.data || []);
     }).catch(() => {}).finally(() => setLoading(false));
+  }, [groupFilter]);
+
+  React.useEffect(() => {
+    const closeMenu = () => setOpenMenuSessionId(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
   }, []);
+
+  React.useEffect(() => {
+    if (activeTab !== 'attendances') return;
+    setAttendancesLoading(true);
+    const params = {};
+    if (attGroupFilter) params.group_id = attGroupFilter;
+    apiGetCoachMyAttendances(params)
+      .then(r => setMyAttendances(r?.data || []))
+      .catch(() => setMyAttendances([]))
+      .finally(() => setAttendancesLoading(false));
+  }, [activeTab, attGroupFilter]);
 
   const groupMap = React.useMemo(() => {
     const m = {};
@@ -390,6 +552,89 @@ export function SessionsScreen({ onMark }) {
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
+  function openEditSession(s) {
+    setEditingSession(s);
+    setEditForm({
+      group_id: String(s.group_id || ''),
+      session_date: s.session_date || todayIso,
+      topic: s.topic || '',
+      start_time: s.start_time || '10:00',
+      end_time: s.end_time || '11:00',
+      station: s.station || '',
+      description: s.description || '',
+    });
+    setOpenMenuSessionId(null);
+  }
+
+  async function handleDeleteSession(id) {
+    if (!window.confirm("Sessiyani o'chirmoqchimisiz?")) return;
+    try {
+      await apiDeleteSession(id);
+      const params = {};
+      if (groupFilter) params.group_id = groupFilter;
+      const sRes = await apiGetSessions(params);
+      setSessions(sRes?.data || []);
+    } catch (e) {
+      alert("O'chirishda xatolik: " + e.message);
+    }
+  }
+
+  async function handleEditSession() {
+    if (!editingSession || !editForm.topic.trim() || !editForm.session_date) return;
+    setSaving(true);
+    try {
+      await apiUpdateSession(editingSession.id, {
+        group_id: Number(editForm.group_id),
+        session_date: editForm.session_date,
+        topic: editForm.topic.trim(),
+        start_time: editForm.start_time,
+        end_time: editForm.end_time,
+        station: editForm.station.trim() || undefined,
+        description: editForm.description.trim() || undefined,
+      });
+      setEditingSession(null);
+      const params = {};
+      if (groupFilter) params.group_id = groupFilter;
+      const sRes = await apiGetSessions(params);
+      setSessions(sRes?.data || []);
+    } catch (e) {
+      alert('Yangilanmadi: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleBulkCreate() {
+    if (!bulkForm.group_id || !bulkForm.from_date || !bulkForm.to_date || !bulkForm.topic.trim() || bulkDays.length === 0) {
+      alert("Guruh, sana oralig'i, kunlar va mavzu majburiy");
+      return;
+    }
+    setSavingBulk(true);
+    try {
+      await apiCreateHeadCoachSessionsBulk({
+        group_id: Number(bulkForm.group_id),
+        from_date: bulkForm.from_date,
+        to_date: bulkForm.to_date,
+        days_of_week: bulkDays.map(Number),
+        topic: bulkForm.topic.trim(),
+        start_time: bulkForm.start_time,
+        end_time: bulkForm.end_time,
+        station: bulkForm.station.trim() || undefined,
+      });
+      setShowBulkCreate(false);
+      setBulkDays([]);
+      setBulkForm(p => ({ ...p, topic: '', station: '' }));
+      const params = {};
+      if (groupFilter) params.group_id = groupFilter;
+      const sRes = await apiGetSessions(params);
+      setSessions(sRes?.data || []);
+    } catch (e) {
+      alert("Ko'plik yaratishda xatolik: " + e.message);
+    } finally {
+      setSavingBulk(false);
+    }
+  }
+
   async function handleCreateSession() {
     if (!newSession.group_id || !newSession.topic.trim() || !newSession.session_date) {
       alert('Guruh, sana va mavzu majburiy');
@@ -425,13 +670,80 @@ export function SessionsScreen({ onMark }) {
           <div className="page-sub">{sessions.length} ta sessiya · {sessions.filter(s => sessionStatus(s.session_date) === 'upcoming').length} ta kelayotgan</div>
         </div>
         <div className="page-actions">
-          <button className={'btn' + (filter === 'week' ? ' primary' : '')} onClick={() => setFilter('week')}>
-            <I.Calendar size={15}/> Hafta
-          </button>
-          <button className="btn primary" onClick={() => setShowCreate(true)}><I.Plus size={15}/> Sessiya rejalashtirish</button>
+          {activeTab === 'sessions' && (
+            <>
+              <button className={'btn' + (filter === 'week' ? ' primary' : '')} onClick={() => setFilter('week')}>
+                <I.Calendar size={15}/> Hafta
+              </button>
+              <button className="btn ghost" onClick={() => setShowBulkCreate(true)}><I.Plus size={15}/> Ko'plik</button>
+              <button className="btn primary" onClick={() => setShowCreate(true)}><I.Plus size={15}/> Sessiya rejalashtirish</button>
+            </>
+          )}
         </div>
       </div>
 
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {[
+          { key: 'sessions', label: 'Sessiyalar' },
+          { key: 'attendances', label: 'Mening davomatlarim' },
+        ].map(t => (
+          <button key={t.key} className={`btn${activeTab === t.key ? ' primary' : ' ghost'}`} style={{ fontSize: 13 }} onClick={() => setActiveTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'attendances' && (
+        <div>
+          <div className="table-wrap">
+            <div className="table-toolbar">
+              <select value={attGroupFilter} onChange={e => setAttGroupFilter(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
+                <option value="">Barcha guruhlar</option>
+                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              <div style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{myAttendances.length} yozuv</div>
+            </div>
+            {attendancesLoading ? (
+              <div className="empty" style={{ padding: 32 }}>Yuklanmoqda...</div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr><th>Sessiya ID</th><th>O'quvchi ID</th><th>Status</th><th>Izoh</th><th>Sana</th></tr>
+                </thead>
+                <tbody>
+                  {myAttendances.length === 0 && (
+                    <tr><td colSpan={5} style={{ padding: 18, color: 'var(--muted)' }}>Davomatlar topilmadi</td></tr>
+                  )}
+                  {myAttendances.map(a => (
+                    <tr key={a.id}>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--muted)' }}>#{a.session_id}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--muted)' }}>#{a.student_id}</td>
+                      <td>
+                        {a.status === 'present' && <span className="chip success"><span className="chip-dot"></span>Kelgan</span>}
+                        {a.status === 'absent' && <span className="chip danger"><span className="chip-dot"></span>Kelmagan</span>}
+                        {a.status === 'late' && <span className="chip warning"><span className="chip-dot"></span>Kechikkan</span>}
+                        {!['present','absent','late'].includes(a.status) && <span className="chip">{a.status}</span>}
+                      </td>
+                      <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{a.comment || '—'}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: 'var(--muted)' }}>{(a.created_at || '').slice(0, 10)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'sessions' && (
+      <div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+        <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
+          <option value="">Barcha guruhlar</option>
+          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+        </select>
+        {groupFilter && <button className="btn sm ghost" onClick={() => setGroupFilter('')}><I.X size={13}/> Filtr olib tashlash</button>}
+      </div>
       <div className="card" style={{ marginBottom: 16, padding: 14 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
           {days.map(d => {
@@ -496,7 +808,30 @@ export function SessionsScreen({ onMark }) {
                   {s._status === 'today' && <span className="chip warning"><span className="chip-dot"></span>Bugun</span>}
                   {s._status === 'upcoming' && <span className="chip"><span className="chip-dot"></span>Kelayotgan</span>}
                 </td>
-                <td><button className="btn sm" onClick={e => { e.stopPropagation(); onMark(s.id); }}>Davomat <I.ArrowRight size={13}/></button></td>
+                <td style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+                  <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
+                    if (openMenuSessionId === s.id) { setOpenMenuSessionId(null); return; }
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setMenuPos({ x: rect.right - 160, y: rect.bottom + 4 });
+                    setOpenMenuSessionId(s.id);
+                  }}><I.More size={15}/></button>
+                  {openMenuSessionId === s.id && (
+                    <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 160, top: menuPos.y, left: menuPos.x }}>
+                      {[
+                        { icon: 'Calendar', label: 'Davomat', action: () => { onMark(s.id); setOpenMenuSessionId(null); } },
+                        { icon: 'Edit', label: 'Tahrirlash', action: () => openEditSession(s) },
+                        { icon: 'Trash', label: "O'chirish", action: () => { setOpenMenuSessionId(null); handleDeleteSession(s.id); }, danger: true },
+                      ].map(item => {
+                        const Ic = I[item.icon];
+                        return (
+                          <button key={item.label} style={{ width: '100%', padding: '9px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: item.danger ? 'var(--brand-red)' : 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={item.action}>
+                            <Ic size={14}/> {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -550,6 +885,117 @@ export function SessionsScreen({ onMark }) {
           </div>
         </div>
       )}
+      {editingSession && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }} onClick={() => setEditingSession(null)}>
+          <div className="card" style={{ width: 560, padding: 22, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Sessiyani tahrirlash</h3>
+              <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setEditingSession(null)}><I.X size={16}/></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="field">
+                <label>Guruh <span className="req">*</span></label>
+                <select value={editForm.group_id} onChange={e => setEditForm(p => ({ ...p, group_id: e.target.value }))}>
+                  <option value="">Tanlang</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Sana <span className="req">*</span></label>
+                <input type="date" value={editForm.session_date} onChange={e => setEditForm(p => ({ ...p, session_date: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Mavzu <span className="req">*</span></label>
+                <input value={editForm.topic} onChange={e => setEditForm(p => ({ ...p, topic: e.target.value }))} placeholder="Masalan: Tezlik mashqi" />
+              </div>
+              <div className="field">
+                <label>Maydon</label>
+                <input value={editForm.station} onChange={e => setEditForm(p => ({ ...p, station: e.target.value }))} placeholder="Maydon 1" />
+              </div>
+              <div className="field">
+                <label>Boshlanish vaqti</label>
+                <input type="time" value={editForm.start_time} onChange={e => setEditForm(p => ({ ...p, start_time: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Tugash vaqti</label>
+                <input type="time" value={editForm.end_time} onChange={e => setEditForm(p => ({ ...p, end_time: e.target.value }))} />
+              </div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Izoh</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} placeholder="Qo'shimcha izoh" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button className="btn ghost" onClick={() => setEditingSession(null)}>Bekor</button>
+              <button className="btn primary" onClick={handleEditSession} disabled={saving}><I.Check size={14}/> {saving ? 'Saqlanmoqda...' : 'Saqlash'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkCreate && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }} onClick={() => setShowBulkCreate(false)}>
+          <div className="card" style={{ width: 560, padding: 22, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Ko'plik sessiya yaratish</h3>
+              <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setShowBulkCreate(false)}><I.X size={16}/></button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Guruh <span className="req">*</span></label>
+                <select value={bulkForm.group_id} onChange={e => setBulkForm(p => ({ ...p, group_id: e.target.value }))}>
+                  <option value="">Tanlang</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Boshlanish sanasi <span className="req">*</span></label>
+                <input type="date" value={bulkForm.from_date} onChange={e => setBulkForm(p => ({ ...p, from_date: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Tugash sanasi <span className="req">*</span></label>
+                <input type="date" value={bulkForm.to_date} onChange={e => setBulkForm(p => ({ ...p, to_date: e.target.value }))} />
+              </div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Hafta kunlari <span className="req">*</span></label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[['1','Du'],['2','Se'],['3','Ch'],['4','Pa'],['5','Ju'],['6','Sh'],['0','Ya']].map(([val, label]) => {
+                    const sel = bulkDays.includes(val);
+                    return (
+                      <button key={val} type="button" onClick={() => setBulkDays(prev => sel ? prev.filter(d => d !== val) : [...prev, val])}
+                        style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid ' + (sel ? 'var(--accent)' : 'var(--border)'), background: sel ? 'var(--selected)' : 'var(--surface)', color: sel ? 'var(--accent)' : 'var(--text)', fontWeight: sel ? 700 : 500, cursor: 'pointer', fontSize: 13 }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Mavzu <span className="req">*</span></label>
+                <input value={bulkForm.topic} onChange={e => setBulkForm(p => ({ ...p, topic: e.target.value }))} placeholder="Masalan: Tezlik mashqi" />
+              </div>
+              <div className="field">
+                <label>Boshlanish vaqti</label>
+                <input type="time" value={bulkForm.start_time} onChange={e => setBulkForm(p => ({ ...p, start_time: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Tugash vaqti</label>
+                <input type="time" value={bulkForm.end_time} onChange={e => setBulkForm(p => ({ ...p, end_time: e.target.value }))} />
+              </div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Maydon</label>
+                <input value={bulkForm.station} onChange={e => setBulkForm(p => ({ ...p, station: e.target.value }))} placeholder="Maydon 1" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button className="btn ghost" onClick={() => setShowBulkCreate(false)}>Bekor</button>
+              <button className="btn primary" onClick={handleBulkCreate} disabled={savingBulk}><I.Check size={14}/> {savingBulk ? 'Yaratilmoqda...' : 'Yaratish'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+      )}
     </div>
   );
 }
@@ -562,6 +1008,9 @@ export function AttendanceMark({ sessionId, onBack }) {
   const [saving, setSaving] = React.useState(false);
   const [marks, setMarks] = React.useState({});
   const [comments, setComments] = React.useState({});
+  const [konspektFile, setKonspektFile] = React.useState(null);
+  const [konspektDesc, setKonspektDesc] = React.useState('');
+  const [uploadingKonspekt, setUploadingKonspekt] = React.useState(false);
 
   React.useEffect(() => {
     if (!sessionId) return;
@@ -708,6 +1157,52 @@ export function AttendanceMark({ sessionId, onBack }) {
           </table>
         </div>
       )}
+
+      {/* Konspekt upload */}
+      <div className="card" style={{ marginTop: 16, padding: 18 }}>
+        <div className="card-title" style={{ marginBottom: 12 }}>Konspekt</div>
+        {session.konspekt_url && (
+          <div style={{ marginBottom: 12, padding: 10, background: 'var(--surface-2)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <I.FileText size={15} color="var(--accent)" />
+            <a href={session.konspekt_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Konspektni ko'rish</a>
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="field">
+            <label>Fayl (PDF, DOCX, rasm)</label>
+            <input type="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png" onChange={e => setKonspektFile(e.target.files?.[0] || null)} />
+          </div>
+          <div className="field">
+            <label>Izoh (ixtiyoriy)</label>
+            <input value={konspektDesc} onChange={e => setKonspektDesc(e.target.value)} placeholder="Konspekt haqida qisqacha..." />
+          </div>
+          <div>
+            <button
+              className="btn primary"
+              disabled={!konspektFile || uploadingKonspekt}
+              onClick={async () => {
+                if (!konspektFile) return;
+                setUploadingKonspekt(true);
+                try {
+                  const fd = new FormData();
+                  fd.append('file', konspektFile);
+                  if (konspektDesc.trim()) fd.append('description', konspektDesc.trim());
+                  const res = await apiUploadCoachSessionKonspekt(sessionId, fd);
+                  setSession(res?.data || session);
+                  setKonspektFile(null);
+                  setKonspektDesc('');
+                } catch (e) {
+                  alert('Yuklashda xatolik: ' + e.message);
+                } finally {
+                  setUploadingKonspekt(false);
+                }
+              }}
+            >
+              <I.Upload size={14} /> {uploadingKonspekt ? 'Yuklanmoqda...' : 'Yuklash'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -717,51 +1212,75 @@ export function PerformanceTable() {
   const currentYear = new Date().getFullYear();
   const [seasonYear, setSeasonYear] = React.useState(currentYear);
 
-  // -- real API data --
   const groupsQuery = useCoachGroupsQuery();
   const groups = groupsQuery.data || [];
-
   const [selectedGroupId, setSelectedGroupId] = React.useState(null);
-  // Default to first group once groups load
   React.useEffect(() => {
-    if (!selectedGroupId && groups.length > 0) {
-      setSelectedGroupId(groups[0].id);
-    }
+    if (!selectedGroupId && groups.length > 0) setSelectedGroupId(groups[0].id);
   }, [groups, selectedGroupId]);
 
   const tableQuery = useGroupPerformanceTableQuery(selectedGroupId, seasonYear);
   const tableData = tableQuery.data || null;
   const matches = tableData?.matches || [];
   const rows = tableData?.rows || [];
-
-  React.useEffect(() => {
-    if (tableQuery.data) {
-      console.log('Performance table data loaded:', {
-        matches: matches.length,
-        rows: rows.length,
-        data: tableQuery.data,
-      });
-    }
-    if (tableQuery.isError) {
-      console.error('Performance table error:', tableQuery.error);
-    }
-  }, [tableQuery.data, tableQuery.isError, tableQuery.error, matches.length, rows.length]);
-
   const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
 
+  // add match
   const [showAddMatch, setShowAddMatch] = React.useState(false);
-  const [newMatch, setNewMatch] = React.useState({
-    match_date: new Date().toISOString().slice(0, 10),
-    opponent: '',
-    tour_label: '',
-  });
+  const [newMatch, setNewMatch] = React.useState({ match_date: new Date().toISOString().slice(0, 10), opponent: '', tour_label: '' });
   const [savingMatch, setSavingMatch] = React.useState(false);
 
-  async function handleAddMatch() {
-    if (!selectedGroupId || !newMatch.opponent.trim() || !newMatch.match_date) {
-      alert('O\'yin sanasi va raqib majburiy');
-      return;
+  // edit match (column)
+  const [editMatchTarget, setEditMatchTarget] = React.useState(null);
+  const [editMatchForm, setEditMatchForm] = React.useState({ match_date: '', opponent: '', tour_label: '' });
+  const [deletingMatchId, setDeletingMatchId] = React.useState(null);
+
+  // cell editing
+  const [editMode, setEditMode] = React.useState(false);
+  const [editCells, setEditCells] = React.useState([]);
+  const [savingTable, setSavingTable] = React.useState(false);
+  const CELL_CYCLE = [null, 'goal', 'assist', 'yellow', 'absent'];
+
+  function enterEditMode() {
+    setEditCells(rows.map(r => {
+      const cells = r.cells || [];
+      return matches.map((_, mi) => cells[mi] ?? null);
+    }));
+    setEditMode(true);
+  }
+
+  function exitEditMode() { setEditMode(false); setEditCells([]); }
+
+  function cycleCell(ri, mi) {
+    setEditCells(prev => {
+      const next = prev.map(r => [...r]);
+      const cur = next[ri][mi];
+      const idx = CELL_CYCLE.indexOf(cur);
+      next[ri][mi] = CELL_CYCLE[(idx + 1) % CELL_CYCLE.length];
+      return next;
+    });
+  }
+
+  async function saveTable() {
+    setSavingTable(true);
+    try {
+      await apiSaveCoachGroupPerformanceTable(selectedGroupId, {
+        title: tableData?.title || '',
+        season_year: seasonYear,
+        matches: matches.map(m => ({ tour_label: m.tour_label, match_date: m.match_date, opponent: m.opponent })),
+        rows: rows.map((r, ri) => ({ student_id: r.student_id, cells: editCells[ri] || [] })),
+      });
+      setEditMode(false);
+      tableQuery.refetch();
+    } catch (e) {
+      alert('Saqlanmadi: ' + e.message);
+    } finally {
+      setSavingTable(false);
     }
+  }
+
+  async function handleAddMatch() {
+    if (!selectedGroupId || !newMatch.opponent.trim() || !newMatch.match_date) { alert("O'yin sanasi va raqib majburiy"); return; }
     setSavingMatch(true);
     try {
       await apiAddPerformanceTableMatch(selectedGroupId, {
@@ -772,50 +1291,46 @@ export function PerformanceTable() {
         values: [],
       });
       setShowAddMatch(false);
-      setNewMatch({
-        match_date: new Date().toISOString().slice(0, 10),
-        opponent: '',
-        tour_label: '',
-      });
-      // Refetch table data
-      setTimeout(() => {
-        if (tableQuery.refetch) {
-          tableQuery.refetch();
-        }
-      }, 300);
+      setNewMatch({ match_date: new Date().toISOString().slice(0, 10), opponent: '', tour_label: '' });
+      exitEditMode();
+      setTimeout(() => tableQuery.refetch(), 300);
     } catch (e) {
-      alert('O\'yin qo\'shilmadi: ' + e.message);
-    } finally {
-      setSavingMatch(false);
-    }
+      alert("O'yin qo'shilmadi: " + e.message);
+    } finally { setSavingMatch(false); }
   }
 
-  function cellStyle(rawValue) {
-    const v = rawValue == null ? null : String(rawValue).toLowerCase().trim();
-    switch (v) {
-      case 'goal':
-      case 'gol':
-        return { bg: 'var(--success-soft)', color: 'var(--success)', label: '⚽', numericGoals: 1 };
-      case 'assist':
-      case 'uzatma':
-        return { bg: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', label: '↗', numericGoals: 0 };
-      case 'yellow':
-      case 'sariq':
-        return { bg: 'var(--warning-soft)', color: 'var(--warning)', label: '▢', numericGoals: 0 };
-      case 'absent':
-      case 'kelmagan':
-        return { bg: 'var(--accent-soft)', color: 'var(--brand-red)', label: '✗', numericGoals: 0 };
-      case null:
-      case '':
-      case 'played':
-        return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: '·', numericGoals: 0 };
-      default: {
-        // Numeric cell — treat as goal count
-        const n = Number(rawValue);
-        if (!isNaN(n) && n > 0) return { bg: 'var(--success-soft)', color: 'var(--success)', label: `⚽ ${n}`, numericGoals: n };
-        return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: v || '·', numericGoals: 0 };
-      }
-    }
+  function openEditMatch(m) {
+    setEditMatchTarget(m);
+    setEditMatchForm({ match_date: m.match_date || '', opponent: m.opponent || '', tour_label: m.tour_label || '' });
+  }
+
+  async function handleEditMatch() {
+    if (!editMatchTarget || !editMatchForm.opponent.trim()) return;
+    setSavingMatch(true);
+    try {
+      await apiUpdateCoachPerformanceTableColumn(selectedGroupId, editMatchTarget.id, {
+        match_date: editMatchForm.match_date,
+        opponent: editMatchForm.opponent.trim(),
+        tour_label: editMatchForm.tour_label.trim() || undefined,
+        values: [],
+      });
+      setEditMatchTarget(null);
+      tableQuery.refetch();
+    } catch (e) {
+      alert('Yangilanmadi: ' + e.message);
+    } finally { setSavingMatch(false); }
+  }
+
+  async function handleDeleteMatch(m) {
+    if (!window.confirm(`"${m.opponent}" o'yinini o'chirmoqchimisiz?`)) return;
+    setDeletingMatchId(m.id);
+    try {
+      await apiDeleteCoachPerformanceTableColumn(selectedGroupId, m.id, seasonYear);
+      exitEditMode();
+      tableQuery.refetch();
+    } catch (e) {
+      alert("O'chirishda xatolik: " + e.message);
+    } finally { setDeletingMatchId(null); }
   }
 
   async function handleExport() {
@@ -826,70 +1341,79 @@ export function PerformanceTable() {
       const a = document.createElement('a');
       a.href = url;
       a.download = `performance-table-${selectedGroupId}-${seasonYear}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch (e) {
-      alert('Excel ochilmadi: ' + e.message);
+    } catch (e) { alert('Excel ochilmadi: ' + e.message); }
+  }
+
+  function cellStyle(rawValue) {
+    const v = rawValue == null ? null : String(rawValue).toLowerCase().trim();
+    switch (v) {
+      case 'goal': case 'gol': return { bg: 'var(--success-soft)', color: 'var(--success)', label: '⚽', numericGoals: 1 };
+      case 'assist': case 'uzatma': return { bg: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', label: '↗', numericGoals: 0 };
+      case 'yellow': case 'sariq': return { bg: 'var(--warning-soft)', color: 'var(--warning)', label: '▢', numericGoals: 0 };
+      case 'absent': case 'kelmagan': return { bg: 'var(--accent-soft)', color: 'var(--brand-red)', label: '✗', numericGoals: 0 };
+      case null: case '': case 'played': return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: '·', numericGoals: 0 };
+      default: {
+        const n = Number(rawValue);
+        if (!isNaN(n) && n > 0) return { bg: 'var(--success-soft)', color: 'var(--success)', label: `⚽ ${n}`, numericGoals: n };
+        return { bg: 'var(--surface-2)', color: 'var(--text-2)', label: v || '·', numericGoals: 0 };
+      }
     }
   }
 
-  // Loading / error states
-  if (groupsQuery.isLoading) {
-    return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
-  }
-  if (groupsQuery.isError) {
-    return <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>Guruhlarni yuklashda xatolik yuz berdi.</div>;
-  }
-  if (groups.length === 0) {
-    return <div className="empty" style={{ padding: 48 }}>Guruhlar topilmadi.</div>;
-  }
+  if (groupsQuery.isLoading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (groupsQuery.isError) return <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>Guruhlarni yuklashda xatolik yuz berdi.</div>;
+  if (groups.length === 0) return <div className="empty" style={{ padding: 48 }}>Guruhlar topilmadi.</div>;
 
   return (
     <div>
       <div className="page-head">
         <div>
           <h1 className="page-title">Natijaviy jadval</h1>
-          <div className="page-sub">
-            {selectedGroup?.name || '—'} · {seasonYear} mavsumi · {matches.length} ta o'yin
-          </div>
+          <div className="page-sub">{selectedGroup?.name || '—'} · {seasonYear} mavsumi · {matches.length} ta o'yin</div>
         </div>
         <div className="page-actions">
-          <select
-            value={selectedGroupId || ''}
-            onChange={e => setSelectedGroupId(Number(e.target.value))}
-            style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}
-          >
+          <select value={selectedGroupId || ''} onChange={e => { setSelectedGroupId(Number(e.target.value)); exitEditMode(); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
-          <select
-            value={seasonYear}
-            onChange={e => setSeasonYear(Number(e.target.value))}
-            style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}
-          >
+          <select value={seasonYear} onChange={e => { setSeasonYear(Number(e.target.value)); exitEditMode(); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <button className="btn" onClick={handleExport} disabled={!selectedGroupId}><I.Download size={15}/> Excel</button>
-          <button className="btn primary" onClick={() => setShowAddMatch(true)} disabled={!selectedGroupId}><I.Plus size={15}/> O'yin qo'shish</button>
+          {editMode ? (
+            <>
+              <button className="btn ghost" onClick={exitEditMode} disabled={savingTable}>Bekor</button>
+              <button className="btn primary" onClick={saveTable} disabled={savingTable}>
+                <I.Save size={15}/> {savingTable ? 'Saqlanmoqda...' : 'Saqlash'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn ghost" onClick={enterEditMode} disabled={!selectedGroupId || matches.length === 0}>
+                <I.Edit size={15}/> Tahrirlash
+              </button>
+              <button className="btn primary" onClick={() => setShowAddMatch(true)} disabled={!selectedGroupId}>
+                <I.Plus size={15}/> O'yin qo'shish
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {tableQuery.isLoading && (
-        <div className="empty" style={{ padding: 48 }}>Jadval yuklanmoqda...</div>
-      )}
-
-      {tableQuery.isError && (
-        <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>
-          <div>Jadvalni yuklashda xatolik yuz berdi.</div>
-          <div style={{ fontSize: 12, marginTop: 8, color: 'var(--muted)' }}>Tafsilotlar uchun console ni tekshiring (F12)</div>
+      {editMode && (
+        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--warning-soft)', border: '1px solid var(--warning)', borderRadius: 8, fontSize: 13, color: 'var(--warning)', fontWeight: 600 }}>
+          Tahrirlash rejimi — katakka bosing, qiymat almashinadi. Yakunlash uchun "Saqlash" ni bosing.
         </div>
       )}
+
+      {tableQuery.isLoading && <div className="empty" style={{ padding: 48 }}>Jadval yuklanmoqda...</div>}
+      {tableQuery.isError && <div className="empty" style={{ padding: 48, color: 'var(--brand-red)' }}>Jadvalni yuklashda xatolik yuz berdi.</div>}
 
       {!tableQuery.isLoading && !tableQuery.isError && matches.length === 0 && (
         <div className="empty" style={{ padding: 48 }}>
           <div>Bu guruh uchun {seasonYear} mavsum ma'lumotlari yo'q.</div>
-          <div style={{ fontSize: 12, marginTop: 8, color: 'var(--muted)' }}>O'yinlar yoki o'quvchi ma'lumotlari qo'shilganini tekshiring</div>
+          <div style={{ fontSize: 12, marginTop: 8, color: 'var(--muted)' }}>O'yin qo'shish uchun yuqoridagi "O'yin qo'shish" tugmasini bosing</div>
         </div>
       )}
 
@@ -908,19 +1432,36 @@ export function PerformanceTable() {
                 <tr>
                   <th style={{ position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 2, minWidth: 220 }}>O'quvchi</th>
                   {matches.map(m => (
-                    <th key={m.id} style={{ textAlign: 'center', minWidth: 90 }}>
-                      <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{m.match_date?.slice(5)} · {m.tour_label || ''}</div>
+                    <th key={m.id} style={{ textAlign: 'center', minWidth: editMode ? 110 : 90 }}>
+                      <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{m.match_date?.slice(5)}{m.tour_label ? ' · ' + m.tour_label : ''}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'none', letterSpacing: 0 }}>{m.opponent}</div>
+                      {editMode && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 4 }}>
+                          <button
+                            className="icon-btn"
+                            style={{ width: 22, height: 22 }}
+                            title="Tahrirlash"
+                            onClick={() => openEditMatch(m)}
+                          ><I.Edit size={11}/></button>
+                          <button
+                            className="icon-btn"
+                            style={{ width: 22, height: 22, color: 'var(--brand-red)', opacity: deletingMatchId === m.id ? 0.5 : 1 }}
+                            title="O'chirish"
+                            disabled={deletingMatchId === m.id}
+                            onClick={() => handleDeleteMatch(m)}
+                          ><I.Trash size={11}/></button>
+                        </div>
+                      )}
                     </th>
                   ))}
                   <th style={{ textAlign: 'center', minWidth: 80, background: 'var(--surface-2)' }}>Jami</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(row => {
+                {rows.map((row, ri) => {
                   let goals = 0;
                   return (
-                    <tr key={row.student_id} style={{ cursor: 'default' }}>
+                    <tr key={row.student_id} style={{ cursor: editMode ? 'pointer' : 'default' }}>
                       <td style={{ position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 1, borderRight: '1px solid var(--border)' }}>
                         <div className="row-name">
                           <div className="avatar sm" style={{ background: avatarColor(row.student_id) }}>
@@ -933,12 +1474,18 @@ export function PerformanceTable() {
                         </div>
                       </td>
                       {matches.map((m, mi) => {
-                        const rawCell = row.cells?.[mi] ?? null;
+                        const rawCell = editMode ? (editCells[ri]?.[mi] ?? null) : (row.cells?.[mi] ?? null);
                         const st = cellStyle(rawCell);
                         goals += st.numericGoals;
                         return (
-                          <td key={m.id} style={{ textAlign: 'center', padding: 4 }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, minWidth: 44, height: 30, padding: '0 10px', background: st.bg, color: st.color, borderRadius: 6, fontSize: 13, fontWeight: 700 }}>
+                          <td key={m.id} style={{ textAlign: 'center', padding: 4 }} onClick={editMode ? () => cycleCell(ri, mi) : undefined}>
+                            <div style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              gap: 3, minWidth: 44, height: 30, padding: '0 10px',
+                              background: st.bg, color: st.color, borderRadius: 6, fontSize: 13, fontWeight: 700,
+                              outline: editMode ? '1px dashed var(--border)' : 'none',
+                              cursor: editMode ? 'pointer' : 'default',
+                            }}>
                               {st.label}
                             </div>
                           </td>
@@ -951,15 +1498,23 @@ export function PerformanceTable() {
               </tbody>
             </table>
           </div>
+
           <div style={{ marginTop: 14, padding: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', gap: 18, fontSize: 12.5, flexWrap: 'wrap' }}>
-            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>⚽</span>Gol</span>
-            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'rgba(15,31,77,0.08)', color: 'var(--brand-navy)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>↗</span>Uzatma</span>
-            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--warning-soft)', color: 'var(--warning)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>▢</span>Sariq kartochka</span>
-            <span><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: 'var(--accent-soft)', color: 'var(--brand-red)', borderRadius: 4, marginRight: 6, fontWeight: 700 }}>✗</span>Kelmagan</span>
+            {[
+              ['⚽', 'var(--success-soft)', 'var(--success)', 'Gol'],
+              ['↗', 'rgba(15,31,77,0.08)', 'var(--brand-navy)', 'Uzatma'],
+              ['▢', 'var(--warning-soft)', 'var(--warning)', 'Sariq kartochka'],
+              ['✗', 'var(--accent-soft)', 'var(--brand-red)', 'Kelmagan'],
+              ['·', 'var(--surface-2)', 'var(--text-2)', 'O\'ynagan'],
+            ].map(([lbl, bg, clr, name]) => (
+              <span key={name}><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 22, background: bg, color: clr, borderRadius: 4, marginRight: 6, fontWeight: 700 }}>{lbl}</span>{name}</span>
+            ))}
+            {editMode && <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontStyle: 'italic' }}>Bosish → qiymat almashinadi</span>}
           </div>
         </>
       )}
 
+      {/* Add match modal */}
       {showAddMatch && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowAddMatch(false)}>
           <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
@@ -975,7 +1530,30 @@ export function PerformanceTable() {
             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
               <button className="btn ghost" onClick={() => setShowAddMatch(false)}>Bekor</button>
               <button className="btn primary" onClick={handleAddMatch} disabled={savingMatch}>
-                <I.Plus size={14}/> {savingMatch ? 'Qo\'shilmoqda...' : "Qo'shish"}
+                <I.Plus size={14}/> {savingMatch ? "Qo'shilmoqda..." : "Qo'shish"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit match modal */}
+      {editMatchTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }} onClick={() => setEditMatchTarget(null)}>
+          <div className="card" style={{ width: 420, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>O'yinni tahrirlash</h3>
+              <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setEditMatchTarget(null)}><I.X size={16}/></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="field"><label>Sana <span className="req">*</span></label><input type="date" value={editMatchForm.match_date} onChange={e => setEditMatchForm(p => ({ ...p, match_date: e.target.value }))} /></div>
+              <div className="field"><label>Raqib <span className="req">*</span></label><input value={editMatchForm.opponent} onChange={e => setEditMatchForm(p => ({ ...p, opponent: e.target.value }))} placeholder="Masalan: Almaty FC"/></div>
+              <div className="field"><label>Tur etiketi</label><input value={editMatchForm.tour_label} onChange={e => setEditMatchForm(p => ({ ...p, tour_label: e.target.value }))} placeholder="Masalan: 1-tur"/></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button className="btn ghost" onClick={() => setEditMatchTarget(null)}>Bekor</button>
+              <button className="btn primary" onClick={handleEditMatch} disabled={savingMatch}>
+                <I.Check size={14}/> {savingMatch ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
             </div>
           </div>

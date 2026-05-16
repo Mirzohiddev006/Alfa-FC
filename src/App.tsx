@@ -5,7 +5,7 @@ import { Sidebar, Topbar } from './shell';
 import { LoginScreen, Dashboard } from './screens-1';
 import { StudentsList, StudentProfile, StudentNew } from './screens-2';
 import { GroupsScreen, SessionsScreen, AttendanceMark, PerformanceTable } from './screens-3';
-import { ContractsScreen, ContractView, GateScreen, UsersScreen, SettingsScreen, TransactionsScreen, ReportsScreen, WaitingListScreen } from './screens-4';
+import { ContractsScreen, ContractView, GateScreen, UsersScreen, SettingsScreen, TransactionsScreen, ReportsScreen, WaitingListScreen, AuditLogsScreen } from './screens-4';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor } from './tweaks-panel';
 import { apiGetMe, apiLogout, getToken, setUnauthorizedHandler } from './api';
 
@@ -118,6 +118,7 @@ export default function App() {
   if (route === 'settings') crumbs.push('Sozlamalar');
   if (route === 'reports') crumbs.push('Hisobotlar');
   if (route === 'waiting-list') crumbs.push("Kutish ro'yxati");
+  if (route === 'audit-logs') crumbs.push('Audit log');
 
   return (
     <div className="app" data-nav={navCollapsed ? 'collapsed' : 'expanded'}>
@@ -143,7 +144,7 @@ export default function App() {
         />
         <div className="content">
           {route === 'dashboard' && <Dashboard role={T.role} onNav={navigate}/>} 
-          {route === 'students' && <StudentsList onOpen={(id) => { setStudentId(id); setRoute('students-profile'); }} onNew={() => setRoute('students-new')}/>} 
+          {route === 'students' && <StudentsList onOpen={(id) => { setStudentId(id); setRoute('students-profile'); }} onNew={() => setRoute('students-new')} onToast={showToast}/>}
           {route === 'students-profile' && <StudentProfile studentId={studentId} onBack={() => navigate('students')}/>} 
           {route === 'students-new' && <StudentNew onBack={() => navigate('students')} onCreated={() => { showToast("O'quvchi muvaffaqiyatli yaratildi"); navigate('students'); }}/>} 
           {route === 'groups' && <GroupsScreen onOpen={(id) => { setGroupId(id); }} selectedGroupId={groupId} onCloseGroup={() => setGroupId(null)} />} 
@@ -162,7 +163,8 @@ export default function App() {
           )}
           {route === 'settings' && <SettingsScreen theme={T.theme} setTheme={(th) => T.setTweak('theme', th)}/>} 
           {route === 'reports' && <ReportsScreen/>} 
-          {route === 'waiting-list' && <WaitingListScreen onToast={showToast}/>} 
+          {route === 'waiting-list' && <WaitingListScreen onToast={showToast}/>}
+          {route === 'audit-logs' && <AuditLogsScreen/>}
         </div>
       </div>
 

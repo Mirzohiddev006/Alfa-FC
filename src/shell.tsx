@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { section: 'Boshqaruv', items: [
     { id: 'waiting-list', label: "Kutish ro'yxati", icon: 'Bell', perm: 'students:view' },
     { id: 'users', label: 'Foydalanuvchilar', icon: 'Users', perm: 'users:manage' },
+    { id: 'audit-logs', label: 'Audit log', icon: 'Shield', perm: 'settings:system:view' },
     { id: 'settings', label: 'Sozlamalar', icon: 'Settings', perm: 'settings:system:view' },
   ]},
 ];

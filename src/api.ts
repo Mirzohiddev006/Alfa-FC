@@ -320,6 +320,10 @@ export async function apiDeleteGroup(id) {
   return apiFetch(`/groups/${id}`, { method: 'DELETE' });
 }
 
+export async function apiDeleteGroupsBulk(ids) {
+  return apiFetch('/groups/bulk-delete', { method: 'POST', body: JSON.stringify(ids) });
+}
+
 export async function apiGetGroupStudents(id) {
   return apiFetch(`/groups/${id}/students`);
 }
@@ -392,6 +396,10 @@ export async function apiSaveCoachGroupPerformanceTable(groupId, data) {
 
 export async function apiCreateCoachPerformanceTableColumn(groupId, data) {
   return apiFetch(`/coach/groups/${groupId}/performance-table/columns`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function apiUpdateCoachPerformanceTableColumn(groupId, matchId, data) {
+  return apiFetch(`/coach/groups/${groupId}/performance-table/columns/${matchId}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
 export async function apiDeleteCoachPerformanceTableColumn(groupId, colId, season_year) {
@@ -630,6 +638,15 @@ export async function apiDownloadDebtors() {
   return res.blob();
 }
 
+export async function apiDownloadPayers(params = {}) {
+  const token = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiPayersExportUrl(params), { headers });
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  return res.blob();
+}
+
 export async function apiGetArchiveStats(year) {
   return apiFetch(`/archive/stats/${year}`);
 }
@@ -652,7 +669,19 @@ export async function apiGetBackupStatus() {
 
 // Settings
 export async function apiGetSettings() {
-  return unwrapData(await apiFetch('/settings/system')) || {};
+  const data = unwrapData(await apiFetch('/settings/system'));
+  // API returns [{key, value, description}] — convert to flat {key: value} map
+  if (Array.isArray(data)) {
+    return data.reduce((acc, item) => {
+      if (item.key) acc[item.key] = item.value ?? '';
+      return acc;
+    }, {});
+  }
+  return data || {};
+}
+
+export async function apiGetSettingsRaw() {
+  return apiFetch('/settings/system');
 }
 
 export async function apiPatchSettings(data) {
@@ -704,4 +733,10 @@ export async function apiGetStudentForContract(id) {
 
 export async function apiUploadStudentPhoto(id, formData) {
   return apiFetch(`/students/${id}/photo`, { method: 'POST', body: formData });
+}
+
+// Audit Logs
+export async function apiGetAuditLogs(params = {}) {
+  const q = new URLSearchParams(params).toString();
+  return apiFetch(`/audit-logs${q ? '?' + q : ''}`);
 }
