@@ -2473,11 +2473,25 @@ export function ReportsScreen() {
       {loadError && <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--warning-soft)', borderRadius: 8, fontSize: 13, color: 'var(--warning)', fontWeight: 500 }}>{loadError}</div>}
 
       {tab === 'dashboard' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-          <Stat label="Faol o'quvchilar" value={safeSummary.active_students ?? '—'} icon={I.Users} />
-          <Stat label="Bugungi tushum" value={safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—'} tone="success" icon={I.TrendingUp} />
-          <Stat label="Qarzdorlar soni" value={safeSummary.total_debtors ?? '—'} tone="danger" icon={I.AlertTriangle} />
-          <Stat label="Bugungi sessiyalar" value={safeSummary.today_sessions ?? '—'} tone="navy" icon={I.Calendar} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+          {[
+            { label: "Faol o'quvchilar", value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--text)' },
+            { label: "Bugungi tushum", value: safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—', icon: I.TrendingUp, color: 'var(--success)' },
+            { label: "Qarzdorlar soni", value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)' },
+            { label: "Bugungi sessiyalar", value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy,#0F1F4D)' },
+          ].map((item, idx, arr) => (
+            <div key={item.label} style={{
+              padding: '28px 24px',
+              borderRight: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+              display: 'flex', flexDirection: 'column', gap: 10,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</span>
+                <item.icon size={16} color={item.color} />
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{item.value}</div>
+            </div>
+          ))}
         </div>
       )}
 
