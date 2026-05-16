@@ -17,7 +17,7 @@ const NAV_ITEMS = [
     { id: 'contracts', label: 'Shartnomalar', icon: 'FileText', perm: 'contracts:view' },
     { id: 'transactions', label: 'Tranzaksiyalar', icon: 'Wallet', perm: 'finance:transactions:view' },
     { id: 'reports', label: 'Hisobotlar', icon: 'Activity', perm: 'finance:transactions:view' },
-    { id: 'gate', label: 'Darvoza loglari', icon: 'Gate', perm: 'gate:logs:view' },
+    // { id: 'gate', label: 'Darvoza loglari', icon: 'Gate', perm: 'gate:logs:view' },
   ]},
   { section: 'Boshqaruv', items: [
     { id: 'waiting-list', label: "Kutish ro'yxati", icon: 'Bell', perm: 'students:view' },
