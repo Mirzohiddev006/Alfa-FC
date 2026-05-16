@@ -1762,6 +1762,11 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
 const MONTH_UZ = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
 function monthName(n) { return MONTH_UZ[(n - 1) % 12] || `Oy ${n}`; }
+function todayDateTimeLocal() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
 
 export function TransactionsScreen({ onToast } = {}) {
   const I = Icon;
@@ -1787,7 +1792,7 @@ export function TransactionsScreen({ onToast } = {}) {
   const [manualWithProof, setManualWithProof] = React.useState(false);
   const [manualForm, setManualForm] = React.useState({
     contract_number: '', amount: '', payment_months: [], source: 'cash',
-    comment: '', payment_year: new Date().getFullYear(), paid_at: '', proof_file: null,
+    comment: '', payment_year: new Date().getFullYear(), paid_at: todayDateTimeLocal(), proof_file: null,
   });
   const [manualSaving, setManualSaving] = React.useState(false);
   const [manualContractMatches, setManualContractMatches] = React.useState([]);
@@ -1845,7 +1850,16 @@ export function TransactionsScreen({ onToast } = {}) {
       try {
         const res = await apiGetContracts({ search: query, page_size: 8 });
         if (!active) return;
-        setManualContractMatches(res?.data || []);
+        const contracts = res?.data || [];
+        setManualContractMatches(contracts);
+        const exactContract = contracts.find((contract) => String(contract.contract_number || '').toLowerCase() === query.toLowerCase());
+        if (exactContract?.monthly_fee) {
+          setManualForm((p) => (
+            p.contract_number.trim().toLowerCase() === query.toLowerCase()
+              ? { ...p, amount: String(exactContract.monthly_fee), paid_at: p.paid_at || todayDateTimeLocal() }
+              : p
+          ));
+        }
       } catch (e) {
         if (!active) return;
         setManualContractMatches([]);
@@ -1951,7 +1965,7 @@ export function TransactionsScreen({ onToast } = {}) {
         });
       }
       setShowManual(false); setManualWithProof(false);
-      setManualForm({ contract_number: '', amount: '', payment_months: [], source: 'cash', comment: '', payment_year: new Date().getFullYear(), paid_at: '', proof_file: null });
+      setManualForm({ contract_number: '', amount: '', payment_months: [], source: 'cash', comment: '', payment_year: new Date().getFullYear(), paid_at: todayDateTimeLocal(), proof_file: null });
       onToast?.("To'lov kiritildi"); loadData();
     } catch (e) { onToast?.('Xatolik: ' + e.message); }
     finally { setManualSaving(false); }
@@ -1988,7 +2002,7 @@ export function TransactionsScreen({ onToast } = {}) {
           <div className="page-sub">{totalCount} ta tranzaksiya · {fmt.format(pageTotal)} so'm (sahifa)</div>
         </div>
         <div className="page-actions">
-          <button className="btn primary" onClick={() => setShowManual(true)}><I.Plus size={15} /> Qo'lda to'lov</button>
+          <button className="btn primary" onClick={() => { setManualForm(p => ({ ...p, paid_at: p.paid_at || todayDateTimeLocal() })); setShowManual(true); }}><I.Plus size={15} /> Qo'lda to'lov</button>
           {selectedIds.length > 0 && (
             <button className="btn ghost" style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }} onClick={handleBulkDelete} disabled={deleting}>
               <I.Trash2 size={15} /> O'chirish ({selectedIds.length})
@@ -2207,7 +2221,8 @@ export function TransactionsScreen({ onToast } = {}) {
                           onClick={() => setManualForm(p => ({
                             ...p,
                             contract_number: contract.contract_number || p.contract_number,
-                            amount: p.amount || String(contract.monthly_fee || ''),
+                            amount: String(contract.monthly_fee || ''),
+                            paid_at: p.paid_at || todayDateTimeLocal(),
                           }))}
                           style={{
                             width: '100%',
@@ -2458,56 +2473,12 @@ export function ReportsScreen() {
       {loadError && <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--warning-soft)', borderRadius: 8, fontSize: 13, color: 'var(--warning)', fontWeight: 500 }}>{loadError}</div>}
 
       {tab === 'dashboard' && (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
-            <Stat label="Faol o'quvchilar" value={safeSummary.active_students ?? '—'} icon={I.Users} />
-            <Stat label="Bugungi tushum" value={safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—'} tone="success" icon={I.TrendingUp} />
-            <Stat label="Qarzdorlar soni" value={safeSummary.total_debtors ?? '—'} tone="danger" icon={I.AlertTriangle} />
-            <Stat label="Bugungi sessiyalar" value={safeSummary.today_sessions ?? '—'} tone="navy" icon={I.Calendar} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 14 }}>
-            <Stat label="7 kunlik daromad" value={safeSummary.last_7_days?.total_inflow != null ? `${fmt.format(safeSummary.last_7_days.total_inflow)} so'm` : '—'} tone="success" icon={I.TrendingUp} />
-            <Stat label="30 kunlik daromad" value={safeSummary.last_30_days?.total_inflow != null ? `${fmt.format(safeSummary.last_30_days.total_inflow)} so'm` : '—'} tone="navy" icon={I.TrendingUp} />
-            <Stat label="30 kunlik tranzaksiyalar" value={safeSummary.last_30_days?.successful_transactions ?? '—'} icon={I.Check} />
-          </div>
-
-          {safeSummary.last_7_days?.source_breakdown?.length > 0 && (
-            <div className="card" style={{ padding: 16, marginBottom: 14 }}>
-              <div className="card-title" style={{ marginBottom: 10 }}>7 kunlik to'lov manbalari</div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {safeSummary.last_7_days.source_breakdown.map((s, i) => (
-                  <div key={i} style={{ flex: '1 1 140px', padding: 12, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 11.5, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>{s.source}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, marginTop: 4 }}>{fmt.format(s.amount)} so'm</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{s.transaction_count} tranzaksiya</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {txStats && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
-              <Stat label="Jami to'lovlar" value={`${fmt.format(txStats.total_paid || 0)} so'm`} tone="success" icon={I.Wallet} />
-              <Stat label="Muvaffaqiyatli" value={txStats.successful_transactions || 0} icon={I.Check} />
-              <Stat label="Click / Payme" value={(txStats.click_transactions || 0) + (txStats.payme_transactions || 0)} icon={I.CreditCard} />
-              <Stat label="Naqd" value={txStats.cash_transactions || 0} icon={I.Wallet} />
-            </div>
-          )}
-
-          {terminatedSummary && (
-            <div className="card" style={{ padding: 16 }}>
-              <div className="card-title" style={{ marginBottom: 12 }}>Bekor qilingan shartnomalar xulosasi</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                <Stat label="Bekor qilingan" value={terminatedSummary.terminated_count || 0} icon={I.XCircle} />
-                <Stat label="Jami kutilgan" value={`${fmt.format(terminatedSummary.total_expected || 0)} so'm`} tone="navy" icon={I.FileText} />
-                <Stat label="Jami to'langan" value={`${fmt.format(terminatedSummary.total_paid || 0)} so'm`} tone="success" icon={I.Check} />
-                <Stat label="Jami qarz" value={`${fmt.format(terminatedSummary.total_debt || 0)} so'm`} tone="danger" icon={I.AlertTriangle} />
-              </div>
-            </div>
-          )}
-        </>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+          <Stat label="Faol o'quvchilar" value={safeSummary.active_students ?? '—'} icon={I.Users} />
+          <Stat label="Bugungi tushum" value={safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—'} tone="success" icon={I.TrendingUp} />
+          <Stat label="Qarzdorlar soni" value={safeSummary.total_debtors ?? '—'} tone="danger" icon={I.AlertTriangle} />
+          <Stat label="Bugungi sessiyalar" value={safeSummary.today_sessions ?? '—'} tone="navy" icon={I.Calendar} />
+        </div>
       )}
 
       {tab === 'finance' && (
