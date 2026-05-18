@@ -412,14 +412,14 @@ export function StudentProfile({ studentId, onBack }) {
                   </div>
                 ))}
               </div>
-              {contract?.custom_fields && (
+              {contract?.custom_fields?.customer && (
                 <div style={{ marginTop: 22 }}>
                   <div className="card-title" style={{ marginBottom: 14 }}>Mijoz (ota-ona)</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                     {[
-                      ["To'liq ismi", contract.custom_fields.customer_full_name || '—'],
-                      ['Pasport', contract.custom_fields.customer_passport_number || '—'],
-                      ['Manzil', contract.custom_fields.customer_address || '—'],
+                      ["To'liq ismi", contract.custom_fields.customer.full_name || '—'],
+                      ['Pasport', contract.custom_fields.customer.passport_number || '—'],
+                      ['Manzil', contract.custom_fields.customer.address || '—'],
                     ].map(([k, v]) => (
                       <div key={k} style={k === 'Manzil' ? { gridColumn: 'span 2' } : {}}>
                         <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{k}</div>
@@ -538,11 +538,11 @@ export function StudentProfile({ studentId, onBack }) {
             <div>
               <div className="card-title" style={{ marginBottom: 14 }}>Mijoz (ota-ona)</div>
               <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: 14, fontSize: 13.5 }}>
-                {contract?.custom_fields ? (
+                {contract?.custom_fields?.customer ? (
                   <>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{contract.custom_fields.customer_full_name || '—'}</div>
-                    <div style={{ color: 'var(--muted)', marginBottom: 8 }}>Pasport: {contract.custom_fields.customer_passport_number || '—'}</div>
-                    <div style={{ color: 'var(--muted)' }}>{contract.custom_fields.customer_address || '—'}</div>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{contract.custom_fields.customer.full_name || '—'}</div>
+                    <div style={{ color: 'var(--muted)', marginBottom: 8 }}>Pasport: {contract.custom_fields.customer.passport_number || '—'}</div>
+                    <div style={{ color: 'var(--muted)' }}>{contract.custom_fields.customer.address || '—'}</div>
                   </>
                 ) : <div className="empty">Ma'lumot yo'q</div>}
               </div>
@@ -769,6 +769,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
   const [step, setStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [showSuccessCard, setShowSuccessCard] = React.useState(false);
   const [createdStudentId, setCreatedStudentId] = React.useState(null);
   const [createdContractId, setCreatedContractId] = React.useState(null);
   const steps = ["O'quvchi ma'lumotlari", 'Ota-ona va shartnoma', 'Fayllar va tasdiqlash'];
@@ -810,15 +811,15 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
       if (files.passport) fd.append('passport', files.passport);
       if (files.extra_file) fd.append('extra_file', files.extra_file);
       const result = await apiCreateStudent(fd);
-      const newStudentId = result?.data?.id || result?.id;
+      setShowSuccessCard(true);
+      const newStudentId = result?.data?.id || result?.data?.student?.id || result?.id || result?.student?.id;
       if (newStudentId) {
         setCreatedStudentId(newStudentId);
         try {
           const fullInfo = await apiGetStudentFullInfo(newStudentId);
-          setCreatedContractId(fullInfo?.data?.contract?.id || null);
+          const contractId = fullInfo?.data?.contract?.id || fullInfo?.data?.contracts?.[0]?.id;
+          setCreatedContractId(contractId || null);
         } catch { setCreatedContractId(null); }
-      } else {
-        onCreated?.();
       }
     } catch (e) {
       setError(e.message || 'Xatolik yuz berdi');
@@ -943,7 +944,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
         </div>
       </div>
 
-      {createdStudentId !== null && (
+      {showSuccessCard && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 16 }}>
           <div style={{ background: 'var(--surface)', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', padding: '40px 36px', maxWidth: 420, width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
