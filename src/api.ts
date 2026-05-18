@@ -268,6 +268,28 @@ export async function apiGetStudentsComprehensiveExportUrl() {
   return `${BASE_URL}/students/comprehensive-export`;
 }
 
+export async function apiDownloadGroupStudentsExport(id) {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/groups/${id}/export-students`, { headers });
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  return res.blob();
+}
+
+export async function apiDownloadStudentFile(url: string) {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+  const res = await fetch(fullUrl, { headers });
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  const cd = res.headers.get('Content-Disposition') || '';
+  const match = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+  const filename = match ? match[1].replace(/['"]/g, '') : 'file';
+  return { blob: await res.blob(), filename };
+}
+
 export async function apiDownloadStudentsComprehensiveExport() {
   const token = getToken();
   const headers: Record<string, string> = {};

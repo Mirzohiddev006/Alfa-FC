@@ -8,7 +8,7 @@ import {
   apiGetStudentAttendanceReport, apiUpdateStudent,
   apiDeleteStudent, apiDeleteStudentsBulk,
   apiUploadStudentPhoto, apiUploadStudentPassport, apiUploadStudentExtraFile,
-  apiContractPdfUrl,
+  apiContractPdfUrl, apiGetContractPdf, apiDownloadStudentFile,
 } from './api';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -277,6 +277,8 @@ export function StudentProfile({ studentId, onBack }) {
   const [tab, setTab] = React.useState('overview');
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [editForm, setEditForm] = React.useState({});
+  const [pdfDownloading, setPdfDownloading] = React.useState(false);
+  const [downloadingFile, setDownloadingFile] = React.useState(null);
   const [editLoading, setEditLoading] = React.useState(false);
   const [editError, setEditError] = React.useState('');
   const [uploadingFile, setUploadingFile] = React.useState(null);
@@ -358,8 +360,6 @@ export function StudentProfile({ studentId, onBack }) {
                 </div>
                 <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: '-0.01em', color: 'white', lineHeight: 1.15 }}>{name}</h1>
                 <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.78)', flexWrap: 'wrap' }}>
-                  <span>#{String(s.id).padStart(4, '0')}</span>
-                  <span>·</span>
                   <span>{age} yosh ({s.date_of_birth})</span>
                   {group && <><span>·</span><span>{group.name}</span></>}
                   {coach && <><span>·</span><span>Murabbiy: {coach.full_name}</span></>}
@@ -370,7 +370,6 @@ export function StudentProfile({ studentId, onBack }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <button className="btn sm" onClick={() => setShowEditModal(true)}><I.Edit size={13}/> Tahrirlash</button>
               {contract && <button className="btn sm" onClick={() => setTab('contract')}><I.FileText size={13}/> Shartnoma</button>}
-              <button className="icon-btn" style={{ width: 32, height: 32 }}><I.More size={15}/></button>
             </div>
           </div>
         </div>
@@ -413,6 +412,23 @@ export function StudentProfile({ studentId, onBack }) {
                   </div>
                 ))}
               </div>
+              {contract?.custom_fields && (
+                <div style={{ marginTop: 22 }}>
+                  <div className="card-title" style={{ marginBottom: 14 }}>Mijoz (ota-ona)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                    {[
+                      ["To'liq ismi", contract.custom_fields.customer_full_name || '—'],
+                      ['Pasport', contract.custom_fields.customer_passport_number || '—'],
+                      ['Manzil', contract.custom_fields.customer_address || '—'],
+                    ].map(([k, v]) => (
+                      <div key={k} style={k === 'Manzil' ? { gridColumn: 'span 2' } : {}}>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{k}</div>
+                        <div style={{ fontSize: 13.5, color: 'var(--text)' }}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <div className="card-title" style={{ marginBottom: 14 }}>Tezkor statistika</div>
@@ -496,8 +512,25 @@ export function StudentProfile({ studentId, onBack }) {
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                 {contract && (
-                  <button className="btn" onClick={() => window.open(apiContractPdfUrl(contract.id), '_blank')}>
-                    <I.Download size={14}/> PDF yuklab olish
+                  <button className="btn" disabled={pdfDownloading} onClick={async () => {
+                    setPdfDownloading(true);
+                    try {
+                      const blob = await apiGetContractPdf(contract.id);
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `shartnoma-${contract.contract_number || contract.id}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch (err) {
+                      alert('PDF yuklab bo\'lmadi: ' + err.message);
+                    } finally {
+                      setPdfDownloading(false);
+                    }
+                  }}>
+                    <I.Download size={14}/> {pdfDownloading ? 'Yuklanmoqda...' : 'PDF yuklab olish'}
                   </button>
                 )}
               </div>
@@ -588,8 +621,26 @@ export function StudentProfile({ studentId, onBack }) {
                       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{url ? 'Mavjud' : "Yo'q"}</div>
                     </div>
                     {url && (
-                      <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => window.open(url, '_blank')} title="Yuklab olish">
-                        <I.Download size={13}/>
+                      <button className="icon-btn" style={{ width: 30, height: 30 }} disabled={downloadingFile === f.apiKey} title="Yuklab olish"
+                        onClick={async () => {
+                          setDownloadingFile(f.apiKey);
+                          try {
+                            const { blob, filename } = await apiDownloadStudentFile(url);
+                            const dlUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = dlUrl;
+                            a.download = filename || f.name;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(dlUrl);
+                          } catch (err) {
+                            alert('Yuklab bo\'lmadi: ' + err.message);
+                          } finally {
+                            setDownloadingFile(null);
+                          }
+                        }}>
+                        {downloadingFile === f.apiKey ? <span style={{ fontSize: 10, fontWeight: 700 }}>...</span> : <I.Download size={13}/>}
                       </button>
                     )}
                   </div>
@@ -776,30 +827,6 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
     }
   }
 
-  if (createdStudentId !== null) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 420, gap: 20, padding: 40 }}>
-        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <I.Check size={36} color="var(--success)"/>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>O'quvchi muvaffaqiyatli ro'yxatga olindi!</div>
-          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Shartnoma PDFi serverda tayyorlandi.</div>
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {createdContractId && (
-            <button className="btn primary" onClick={() => onViewContract?.(createdContractId)}>
-              <I.FileText size={14}/> Shartnomani ko'rish
-            </button>
-          )}
-          <button className="btn ghost" onClick={() => onCreated?.()}>
-            <I.ArrowLeft size={14}/> O'quvchilar ro'yxatiga qaytish
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14}/> Orqaga</button>
@@ -915,6 +942,32 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
           </div>
         </div>
       </div>
+
+      {createdStudentId !== null && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 16 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.22)', padding: '40px 36px', maxWidth: 420, width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <I.Check size={36} color="var(--success)"/>
+            </div>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Shartnomangiz tayyor!</div>
+              <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.5 }}>O'quvchi muvaffaqiyatli ro'yxatga olindi va shartnoma PDFi serverda tayyorlandi.</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+              {createdContractId && (
+                <button className="btn primary" style={{ justifyContent: 'center', width: '100%', padding: '12px 0', fontSize: 14 }}
+                  onClick={() => window.open(apiContractPdfUrl(createdContractId), '_blank', 'noopener,noreferrer')}>
+                  <I.FileText size={15}/> Shartnomani ko'rish
+                </button>
+              )}
+              <button className="btn ghost" style={{ justifyContent: 'center', width: '100%', padding: '11px 0', fontSize: 13.5 }}
+                onClick={() => onCreated?.()}>
+                O'quvchilar ro'yxatiga qaytish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

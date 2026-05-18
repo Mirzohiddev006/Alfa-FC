@@ -1544,14 +1544,6 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
           {activeTab === 'general' && (
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="field"><label>Klub / Kompaniya nomi</label><input value={settings.club_name || settings.company_name || ''} onChange={(e) => setVal('club_name', e.target.value)} /></div>
-                <div className="field"><label>INN</label><input value={settings.inn || settings.company_inn || ''} onChange={(e) => setVal('inn', e.target.value)} /></div>
-                <div className="field" style={{ gridColumn: 'span 2' }}><label>Manzil</label><input value={settings.address || settings.company_address || ''} onChange={(e) => setVal('address', e.target.value)} /></div>
-                <div className="field"><label>Telefon</label><input value={settings.phone || settings.company_phone || ''} onChange={(e) => setVal('phone', e.target.value)} /></div>
-                <div className="field"><label>Email</label><input value={settings.email || settings.company_email || ''} onChange={(e) => setVal('email', e.target.value)} /></div>
-              </div>
-
               {rawSettings.length > 0 && (
                 <div style={{ marginTop: 20 }}>
                   <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Barcha tizim sozlamalari</div>

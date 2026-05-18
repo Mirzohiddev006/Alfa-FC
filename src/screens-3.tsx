@@ -6,7 +6,7 @@ import {
   apiGetGroups, apiGetHeadCoachGroups, apiGetGroup, apiGetGroupStudents, apiCreateGroup, apiUpdateGroup, apiDeleteGroup, apiDeleteGroupsBulk,
   apiGetSessions, apiGetSessionDetails, apiGetCoachSessionDetails, apiCreateSession,
   apiUpdateSession, apiDeleteSession, apiCreateHeadCoachSessionsBulk,
-  apiGetCoaches, apiGetGroupStudentsExportUrl, apiDownloadCoachGroupPerformanceTableExport,
+  apiGetCoaches, apiDownloadGroupStudentsExport, apiDownloadCoachGroupPerformanceTableExport,
   apiMarkAttendance, apiMarkBulkAttendance, apiAddPerformanceTableMatch,
   apiSaveCoachGroupPerformanceTable, apiDeleteCoachPerformanceTableColumn, apiUpdateCoachPerformanceTableColumn,
   apiUploadCoachSessionKonspekt, apiGetCoachMyAttendances,
@@ -175,10 +175,17 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
 
   async function handleExport(groupId) {
     try {
-      const url = apiGetGroupStudentsExportUrl(groupId);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const blob = await apiDownloadGroupStudentsExport(groupId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `guruh-${groupId}-export.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
-      alert('Export ochilmadi: ' + e.message);
+      alert('Export xatoligi: ' + e.message);
     }
   }
 

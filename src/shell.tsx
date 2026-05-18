@@ -9,7 +9,7 @@ const NAV_ITEMS = [
     { id: 'dashboard', label: 'Bosh sahifa', icon: 'Dashboard', perm: 'reports:dashboard:view' },
   ]},
   { section: "O'quv jarayoni", items: [
-    { id: 'students', label: "O'quvchilar", icon: 'Users', perm: 'students:view', badge: '84' },
+    { id: 'students', label: "O'quvchilar", icon: 'Users', perm: 'students:view' },
     { id: 'groups', label: 'Guruhlar', icon: 'Group', perm: 'groups:view' },
     { id: 'sessions', label: 'Trening sessiyalari', icon: 'Calendar', perm: 'attendance:view' },
     { id: 'performance', label: 'Natijaviy jadval', icon: 'Trophy', perm: 'sessions:manage' },
