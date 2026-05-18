@@ -772,6 +772,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
   const [showSuccessCard, setShowSuccessCard] = React.useState(false);
   const [createdStudentId, setCreatedStudentId] = React.useState(null);
   const [createdContractId, setCreatedContractId] = React.useState(null);
+  const [viewingContract, setViewingContract] = React.useState(false);
   const steps = ["O'quvchi ma'lumotlari", 'Ota-ona va shartnoma', 'Fayllar va tasdiqlash'];
 
   const [form, setForm] = React.useState({
@@ -957,8 +958,20 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
               {createdContractId && (
                 <button className="btn primary" style={{ justifyContent: 'center', width: '100%', padding: '12px 0', fontSize: 14 }}
-                  onClick={() => window.open(apiContractPdfUrl(createdContractId), '_blank', 'noopener,noreferrer')}>
-                  <I.FileText size={15}/> Shartnomani ko'rish
+                  disabled={viewingContract}
+                  onClick={async () => {
+                    setViewingContract(true);
+                    try {
+                      const blob = await apiGetContractPdf(createdContractId);
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    } catch (err) {
+                      alert('Shartnomani ochib bo\'lmadi: ' + err.message);
+                    } finally {
+                      setViewingContract(false);
+                    }
+                  }}>
+                  <I.FileText size={15}/> {viewingContract ? 'Ochilmoqda...' : "Shartnomani ko'rish"}
                 </button>
               )}
               <button className="btn ghost" style={{ justifyContent: 'center', width: '100%', padding: '11px 0', fontSize: 13.5 }}
