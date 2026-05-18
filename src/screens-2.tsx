@@ -10,53 +10,7 @@ import {
   apiUploadStudentPhoto, apiUploadStudentPassport, apiUploadStudentExtraFile,
   apiContractPdfUrl, apiGetContractPdf, apiDownloadStudentFile,
 } from './api';
-
-function SearchableGroupSelect({ value, onChange, groups, placeholder = "Barcha guruhlar" }) {
-  const I = Icon;
-  const [open, setOpen] = React.useState(false);
-  const [q, setQ] = React.useState('');
-  const ref = React.useRef(null);
-  const filtered = groups.filter(g => !q || g.name.toLowerCase().includes(q.toLowerCase()));
-  const selectedGroup = groups.find(g => String(g.id) === String(value));
-  React.useEffect(() => {
-    function handler(e) { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setQ(''); } }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen(o => !o)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', minWidth: 180, justifyContent: 'space-between', whiteSpace: 'nowrap' }}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedGroup ? selectedGroup.name : placeholder}</span>
-        <I.ChevronDown size={14} style={{ flexShrink: 0 }} />
-      </button>
-      {open && (
-        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, minWidth: '100%', width: 'max-content', maxWidth: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', zIndex: 300 }}>
-          <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface-2)', borderRadius: 6, padding: '4px 8px' }}>
-              <I.Search size={13} color="var(--muted)" />
-              <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Qidirish..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12.5, flex: 1, color: 'var(--text)' }} />
-            </div>
-          </div>
-          <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-            {[{ id: 'all', name: placeholder }, ...filtered].map(g => {
-              const isSelected = g.id === 'all' ? (!value || value === 'all') : String(value) === String(g.id);
-              return (
-                <div key={g.id} onClick={() => { onChange(g.id === 'all' ? 'all' : String(g.id)); setOpen(false); setQ(''); }}
-                  style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: isSelected ? 'var(--selected)' : 'transparent' }}
-                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--surface-2)'; }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}>
-                  {isSelected ? <I.Check size={13} color="var(--brand-red)" /> : <span style={{ width: 13, display: 'inline-block' }} />}
-                  <span>{g.name}</span>
-                </div>
-              );
-            })}
-            {filtered.length === 0 && <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--muted)' }}>Topilmadi</div>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { SearchableGroupSelect } from './components';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
 function avatarColor(id) { return AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length]; }
@@ -80,7 +34,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
   const [loading, setLoading] = React.useState(true);
   const [q, setQ] = React.useState('');
   const [status, setStatus] = React.useState('all');
-  const [groupId, setGroupId] = React.useState('all');
+  const [groupId, setGroupId] = React.useState('');
   const [selected, setSelected] = React.useState([]);
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
@@ -96,7 +50,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
       const params = { page, page_size: PAGE_SIZE };
       if (q) params.search = q;
       if (status !== 'all') params.status = status;
-      if (groupId !== 'all') params.group_id = groupId;
+      if (groupId) params.group_id = groupId;
       Object.assign(params, overrides);
       const res = await apiGetStudents(params);
       setStudents(res?.data || []);
@@ -209,7 +163,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
             <option value="inactive">Nofaol</option>
             <option value="archived">Arxiv</option>
           </select>
-          <SearchableGroupSelect value={groupId} onChange={v => { setGroupId(v); setPage(1); }} groups={groups} />
+          <SearchableGroupSelect value={groupId} onChange={v => { setGroupId(v === 'all' ? '' : v); setPage(1); }} groups={groups} />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 12.5 }}>
             {selected.length > 0 && <span style={{ color: 'var(--text)', fontWeight: 600 }}>{selected.length} tanlangan</span>}
             {loading && <span>Yuklanmoqda...</span>}
@@ -921,10 +875,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
               <div className="field"><label>Millati</label><input value={form.millati} onChange={e => setF('millati', e.target.value)} placeholder="O'zbek"/></div>
               <div className="field" style={{ gridColumn: 'span 2' }}><label>Manzil</label><input value={form.address} onChange={e => setF('address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
               <div className="field"><label>Guruh</label>
-                <select value={form.group_id} onChange={e => setF('group_id', e.target.value)}>
-                  <option value="">Tanlanmagan</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+                <SearchableGroupSelect value={form.group_id} onChange={v => setF('group_id', v)} groups={groups} placeholder="Tanlanmagan" />
               </div>
             </div>
           )}

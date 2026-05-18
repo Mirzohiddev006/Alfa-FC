@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { Icon } from './icons';
+import { SearchableGroupSelect } from './components';
 import {
   apiGetContracts,
   apiGetContract,
@@ -1901,12 +1902,21 @@ export function TransactionsScreen({ onToast } = {}) {
     } catch (e) { alert('Export xatoligi: ' + e.message); }
   }
 
-  async function openDetail(id) {
+  async function openDetail(id, rowData = null) {
     setDetailLoading(true);
-    setDetail({ id });
+    setDetail(rowData ? { ...rowData } : { id });
     try {
       const res = await apiGetTransaction(id);
-      setDetail(res?.data || null);
+      const tx = res?.data || null;
+      if (!tx) { setDetail(null); return; }
+      const merged = { ...rowData, ...tx };
+      if (tx.contract_id && !merged.contract_number) {
+        try {
+          const cr = await apiGetContract(tx.contract_id);
+          merged.contract_number = cr?.data?.contract_number || null;
+        } catch {}
+      }
+      setDetail(merged);
     } catch (e) { setDetail(null); alert('Tranzaksiya ochilmadi: ' + e.message); }
     finally { setDetailLoading(false); }
   }
@@ -2088,12 +2098,12 @@ export function TransactionsScreen({ onToast } = {}) {
                   <td style={{ padding: '0 8px' }} onClick={e => e.stopPropagation()}>
                     <input type="checkbox" checked={checked} onChange={e => setSelectedIds(p => e.target.checked ? [...p, t.id] : p.filter(x => x !== t.id))} />
                   </td>
-                  <td style={{ fontVariantNumeric: 'tabular-nums', cursor: 'pointer', fontSize: 12.5 }} onClick={() => openDetail(t.id)}>{(t.paid_at || t.created_at || '').slice(0, 16).replace('T', ' ')}</td>
-                  <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id)}>{t.student_full_name || `#${t.student_id || '—'}`}</td>
-                  <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id)}><span className="chip">{sourceLabel(t.source)}</span></td>
-                  <td style={{ color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer' }} onClick={() => openDetail(t.id)}>{(t.payment_months || []).map(m => monthName(m)).join(', ') || '—'}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', cursor: 'pointer' }} onClick={() => openDetail(t.id)}>{fmt.format(t.amount || 0)} so'm</td>
-                  <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id)}><span className={'chip' + (st.cls ? ` ${st.cls}` : '')}>{st.text}</span></td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums', cursor: 'pointer', fontSize: 12.5 }} onClick={() => openDetail(t.id, t)}>{(t.paid_at || t.created_at || '').slice(0, 16).replace('T', ' ')}</td>
+                  <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id, t)}>{t.student_full_name || `#${t.student_id || '—'}`}</td>
+                  <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id, t)}><span className="chip">{sourceLabel(t.source)}</span></td>
+                  <td style={{ color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer' }} onClick={() => openDetail(t.id, t)}>{(t.payment_months || []).map(m => monthName(m)).join(', ') || '—'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', cursor: 'pointer' }} onClick={() => openDetail(t.id, t)}>{fmt.format(t.amount || 0)} so'm</td>
+                  <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id, t)}><span className={'chip' + (st.cls ? ` ${st.cls}` : '')}>{st.text}</span></td>
                   {scope === 'unassigned' && (
                     <td>
                       <button className="btn ghost" style={{ padding: '3px 10px', fontSize: 12 }} onClick={() => setAssignTxId(t.id)}>Biriktirish</button>
@@ -2920,11 +2930,7 @@ export function WaitingListScreen({ onToast } = {}) {
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1); }}
-          style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, minWidth: 160 }}>
-          <option value="">Barcha guruhlar</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
+        <SearchableGroupSelect value={groupFilter} onChange={v => { setGroupFilter(v); setPage(1); }} groups={groups} />
         <input
           type="number" placeholder="Tug'ilgan yil" value={birthYearFilter}
           onChange={e => { setBirthYearFilter(e.target.value); setPage(1); }}
@@ -3052,10 +3058,7 @@ export function WaitingListScreen({ onToast } = {}) {
               <div className="field"><label>Familiyasi <span className="req">*</span></label><input value={form.student_last_name} onChange={(e) => setForm((p) => ({ ...p, student_last_name: e.target.value }))} /></div>
               <div className="field"><label>Tug'ilgan yil <span className="req">*</span></label><input type="number" min={2000} max={2020} value={form.birth_year} onChange={(e) => setForm((p) => ({ ...p, birth_year: e.target.value }))} placeholder="2010" /></div>
               <div className="field"><label>Guruh</label>
-                <select value={form.group_id} onChange={(e) => setForm((p) => ({ ...p, group_id: e.target.value }))}>
-                  <option value="">Tanlanmagan</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+                <SearchableGroupSelect value={form.group_id} onChange={v => setForm(p => ({ ...p, group_id: v }))} groups={groups} placeholder="Tanlanmagan" />
               </div>
               <div className="field"><label>Ota ismi</label><input value={form.father_name} onChange={(e) => setForm((p) => ({ ...p, father_name: e.target.value }))} /></div>
               <div className="field"><label>Ota telefoni</label><input value={form.father_phone} onChange={(e) => setForm((p) => ({ ...p, father_phone: e.target.value }))} placeholder="+998..." /></div>

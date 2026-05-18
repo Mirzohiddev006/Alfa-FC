@@ -12,6 +12,7 @@ import {
   apiUploadCoachSessionKonspekt, apiGetCoachMyAttendances,
 } from './api';
 import { useCoachGroupsQuery, useGroupPerformanceTableQuery } from './features/performance-table/model/use-performance-table';
+import { SearchableGroupSelect } from './components';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
 function avatarColor(id) { return AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length]; }
@@ -709,10 +710,7 @@ export function SessionsScreen({ onMark }) {
         <div>
           <div className="table-wrap">
             <div className="table-toolbar">
-              <select value={attGroupFilter} onChange={e => setAttGroupFilter(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-                <option value="">Barcha guruhlar</option>
-                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
+              <SearchableGroupSelect value={attGroupFilter} onChange={v => setAttGroupFilter(v)} groups={groups} />
               <div style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{myAttendances.length} yozuv</div>
             </div>
             {attendancesLoading ? (
@@ -750,10 +748,7 @@ export function SessionsScreen({ onMark }) {
       {activeTab === 'sessions' && (
       <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-        <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">Barcha guruhlar</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
+        <SearchableGroupSelect value={groupFilter} onChange={v => setGroupFilter(v)} groups={groups} />
         {groupFilter && <button className="btn sm ghost" onClick={() => setGroupFilter('')}><I.X size={13}/> Filtr olib tashlash</button>}
       </div>
       <div className="card" style={{ marginBottom: 16, padding: 14 }}>
@@ -860,10 +855,7 @@ export function SessionsScreen({ onMark }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="field">
                 <label>Guruh <span className="req">*</span></label>
-                <select value={newSession.group_id} onChange={e => setNewSession(p => ({ ...p, group_id: e.target.value }))}>
-                  <option value="">Tanlang</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+                <SearchableGroupSelect value={newSession.group_id} onChange={v => setNewSession(p => ({ ...p, group_id: v }))} groups={groups} placeholder="Tanlang" />
               </div>
               <div className="field">
                 <label>Sana <span className="req">*</span></label>
@@ -907,10 +899,7 @@ export function SessionsScreen({ onMark }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="field">
                 <label>Guruh <span className="req">*</span></label>
-                <select value={editForm.group_id} onChange={e => setEditForm(p => ({ ...p, group_id: e.target.value }))}>
-                  <option value="">Tanlang</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+                <SearchableGroupSelect value={editForm.group_id} onChange={v => setEditForm(p => ({ ...p, group_id: v }))} groups={groups} placeholder="Tanlang" />
               </div>
               <div className="field">
                 <label>Sana <span className="req">*</span></label>
@@ -955,10 +944,7 @@ export function SessionsScreen({ onMark }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>Guruh <span className="req">*</span></label>
-                <select value={bulkForm.group_id} onChange={e => setBulkForm(p => ({ ...p, group_id: e.target.value }))}>
-                  <option value="">Tanlang</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+                <SearchableGroupSelect value={bulkForm.group_id} onChange={v => setBulkForm(p => ({ ...p, group_id: v }))} groups={groups} placeholder="Tanlang" />
               </div>
               <div className="field">
                 <label>Boshlanish sanasi <span className="req">*</span></label>
@@ -1386,9 +1372,7 @@ export function PerformanceTable() {
           <div className="page-sub">{selectedGroup?.name || '—'} · {seasonYear} mavsumi · {matches.length} ta o'yin</div>
         </div>
         <div className="page-actions">
-          <select value={selectedGroupId || ''} onChange={e => { setSelectedGroupId(Number(e.target.value)); exitEditMode(); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
+          <SearchableGroupSelect value={selectedGroupId || ''} onChange={v => { setSelectedGroupId(v ? Number(v) : null); exitEditMode(); }} groups={groups} placeholder="Guruh tanlang" />
           <select value={seasonYear} onChange={e => { setSeasonYear(Number(e.target.value)); exitEditMode(); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
