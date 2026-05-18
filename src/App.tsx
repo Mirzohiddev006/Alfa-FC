@@ -137,6 +137,7 @@ export default function App() {
           crumbs={crumbs}
           role={T.role}
           onRoleSwitch={(r) => { T.setTweak('role', r); showToast(`Rol o'zgartirildi: ${r}`); }}
+          canSwitchRole={!currentUser || currentUser?.roles?.some(r => r.name === 'Super Admin')}
           theme={T.theme}
           onTheme={(th) => T.setTweak('theme', th)}
           onSignOut={handleSignOut}
@@ -150,12 +151,12 @@ export default function App() {
           {route === 'students' && <StudentsList onOpen={(id) => { setStudentId(id); setRoute('students-profile'); }} onNew={() => setRoute('students-new')} onToast={showToast}/>}
           {route === 'students-profile' && <StudentProfile studentId={studentId} onBack={() => navigate('students')}/>} 
           {route === 'students-new' && <StudentNew onBack={() => navigate('students')} onCreated={() => { showToast("O'quvchi muvaffaqiyatli yaratildi"); navigate('students'); }} onViewContract={(cid) => { setContractId(cid); navigate('contracts-view'); }}/>}
-          {route === 'groups' && <GroupsScreen onOpen={(id) => { setGroupId(id); }} selectedGroupId={groupId} onCloseGroup={() => setGroupId(null)} />} 
+          {route === 'groups' && <GroupsScreen onOpen={(id) => { setGroupId(id); }} selectedGroupId={groupId} onCloseGroup={() => setGroupId(null)} onToast={showToast} />} 
           {(route === 'sessions' || route === 'attendance') && <SessionsScreen onMark={(id) => { setSessionId(id); setRoute('attendance-mark'); }}/>} 
           {route === 'attendance-mark' && <AttendanceMark sessionId={sessionId} onBack={() => navigate('sessions')}/>} 
           {route === 'performance' && <PerformanceTable/>} 
-          {route === 'contracts' && <ContractsScreen onOpenContract={(id) => { setContractId(id); setRoute('contracts-view'); }}/>} 
-          {route === 'contracts-view' && <ContractView contractId={contractId} onBack={() => navigate('contracts')}/>} 
+          {route === 'contracts' && <ContractsScreen onOpenContract={(id) => { setContractId(id); setRoute('contracts-view'); }} onToast={showToast}/>}
+          {route === 'contracts-view' && <ContractView contractId={contractId} onBack={() => navigate('contracts')} onToast={showToast}/>} 
           {route === 'transactions' && <TransactionsScreen onToast={showToast}/>} 
           {route === 'gate' && <GateScreen/>} 
           {(route === 'users' || route === 'roles') && (

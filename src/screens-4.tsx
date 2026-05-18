@@ -101,7 +101,7 @@ function statusChip(status) {
 
 // ─── Contracts ───────────────────────────────────────────────────────────────
 
-export function ContractsScreen({ onOpenContract }) {
+export function ContractsScreen({ onOpenContract, onToast }) {
   const I = Icon;
   const [contracts, setContracts] = React.useState([]);
   const [terminated, setTerminated] = React.useState([]);
@@ -115,6 +115,7 @@ export function ContractsScreen({ onOpenContract }) {
   const [totalCount, setTotalCount] = React.useState(0);
   const [terminating, setTerminating] = React.useState(null);
   const [terminateReason, setTerminateReason] = React.useState('');
+  const [terminateAt, setTerminateAt] = React.useState('');
   const [terminateModal, setTerminateModal] = React.useState(false);
   const PAGE_SIZE = 50;
 
@@ -163,17 +164,24 @@ export function ContractsScreen({ onOpenContract }) {
   function openTerminate(contract) {
     setTerminating(contract);
     setTerminateReason('');
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    setTerminateAt(now.toISOString().slice(0, 16));
     setTerminateModal(true);
   }
 
   async function confirmTerminate() {
     if (!terminating || !terminateReason.trim()) return;
     try {
-      await apiTerminateContract(terminating.id, { termination_reason: terminateReason });
+      await apiTerminateContract(terminating.id, {
+        termination_reason: terminateReason,
+        terminated_at: terminateAt ? new Date(terminateAt).toISOString() : new Date().toISOString(),
+      });
       setTerminateModal(false);
+      onToast?.('Shartnoma tugatildi');
       loadActive({ page: 1 });
     } catch (e) {
-      alert('Bekor qilish xatosi: ' + e.message);
+      onToast?.('Bekor qilish xatosi: ' + e.message);
     }
   }
 
@@ -242,7 +250,6 @@ export function ContractsScreen({ onOpenContract }) {
             <thead>
               <tr>
                 <th>Shartnoma №</th>
-                <th>O'quvchi ID</th>
                 <th>Mijoz</th>
                 <th>Davr</th>
                 <th>Oylik to'lov</th>
@@ -257,7 +264,6 @@ export function ContractsScreen({ onOpenContract }) {
               {rows.map((c) => (
                 <tr key={c.id} onClick={() => onOpenContract?.(c.id)} style={{ cursor: 'pointer' }}>
                   <td style={{ fontWeight: 700 }}>{c.contract_number}</td>
-                  <td style={{ color: 'var(--text-2)' }}>#{c.student_id || '—'}</td>
                   <td style={{ color: 'var(--text-2)' }}>{c.custom_fields?.customer?.full_name || '—'}</td>
                   <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5 }}>
                     {c.start_date || '—'} <span style={{ color: 'var(--muted)' }}>→</span> {c.end_date || '—'}
@@ -267,7 +273,7 @@ export function ContractsScreen({ onOpenContract }) {
                   <td onClick={e => e.stopPropagation()}>
                     {c.status === 'ACTIVE' && (
                       <button className="btn ghost sm" style={{ color: 'var(--brand-red)', fontSize: 12 }} onClick={() => openTerminate(c)}>
-                        <I.XCircle size={13} /> Bekor
+                        <I.XCircle size={13} /> Tugatish
                       </button>
                     )}
                   </td>
@@ -294,9 +300,13 @@ export function ContractsScreen({ onOpenContract }) {
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setTerminateModal(false)}><I.X size={15} /></button>
             </div>
             <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--muted)' }}>Shartnoma: <strong>{terminating?.contract_number}</strong></div>
-            <div className="field" style={{ marginBottom: 14 }}>
+            <div className="field" style={{ marginBottom: 12 }}>
               <label>Bekor qilish sababi *</label>
               <textarea rows={3} value={terminateReason} onChange={e => setTerminateReason(e.target.value)} placeholder="Sababni kiriting..." />
+            </div>
+            <div className="field" style={{ marginBottom: 14 }}>
+              <label>Bekor qilish sanasi va vaqti *</label>
+              <input type="datetime-local" value={terminateAt} onChange={e => setTerminateAt(e.target.value)} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="btn ghost" onClick={() => setTerminateModal(false)}>Bekor</button>
@@ -311,7 +321,7 @@ export function ContractsScreen({ onOpenContract }) {
   );
 }
 
-export function ContractView({ contractId, onBack }) {
+export function ContractView({ contractId, onBack, onToast }) {
   const I = Icon;
   const [contract, setContract] = React.useState(null);
   const [student, setStudent] = React.useState(null);
@@ -322,6 +332,7 @@ export function ContractView({ contractId, onBack }) {
   // modals
   const [terminateModal, setTerminateModal] = React.useState(false);
   const [terminateReason, setTerminateReason] = React.useState('');
+  const [terminateAt, setTerminateAt] = React.useState('');
   const [feeModal, setFeeModal] = React.useState(false);
   const [newFee, setNewFee] = React.useState('');
   const [datesModal, setDatesModal] = React.useState(false);
@@ -374,11 +385,15 @@ export function ContractView({ contractId, onBack }) {
     if (!terminateReason.trim()) return;
     setSaving(true);
     try {
-      await apiTerminateContract(contractId, { termination_reason: terminateReason });
+      await apiTerminateContract(contractId, {
+        termination_reason: terminateReason,
+        terminated_at: terminateAt ? new Date(terminateAt).toISOString() : new Date().toISOString(),
+      });
       setTerminateModal(false);
+      onToast?.('Shartnoma tugatildi');
       load();
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      onToast?.('Xatolik: ' + e.message);
     } finally { setSaving(false); }
   }
 
@@ -388,9 +403,10 @@ export function ContractView({ contractId, onBack }) {
     try {
       await apiPatchContractMonthlyFee(contractId, { monthly_fee_amount: Number(newFee) });
       setFeeModal(false);
+      onToast?.("Oylik to'lov yangilandi");
       load();
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      onToast?.('Xatolik: ' + e.message);
     } finally { setSaving(false); }
   }
 
@@ -400,9 +416,10 @@ export function ContractView({ contractId, onBack }) {
     try {
       await apiPatchContractDates(contractId, { start_date: datesForm.start_date, end_date: datesForm.end_date });
       setDatesModal(false);
+      onToast?.('Sanalar yangilandi');
       load();
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      onToast?.('Xatolik: ' + e.message);
     } finally { setSaving(false); }
   }
 
@@ -421,9 +438,10 @@ export function ContractView({ contractId, onBack }) {
       };
       await apiUpdateContract(contractId, body);
       setEditModal(false);
+      onToast?.('Shartnoma yangilandi');
       load();
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      onToast?.('Xatolik: ' + e.message);
     } finally { setSaving(false); }
   }
 
@@ -433,9 +451,10 @@ export function ContractView({ contractId, onBack }) {
     try {
       await apiPatchContractStatus(contractId, { status: newStatus });
       setStatusModal(false);
+      onToast?.('Status yangilandi');
       load();
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      onToast?.('Xatolik: ' + e.message);
     } finally { setSaving(false); }
   }
 
@@ -478,7 +497,7 @@ export function ContractView({ contractId, onBack }) {
             </button>
           )}
           {contract.status === 'ACTIVE' && (
-            <button className="btn ghost" onClick={() => { setTerminateReason(''); setTerminateModal(true); }} style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
+            <button className="btn ghost" onClick={() => { setTerminateReason(''); const _n = new Date(); _n.setMinutes(_n.getMinutes() - _n.getTimezoneOffset()); setTerminateAt(_n.toISOString().slice(0, 16)); setTerminateModal(true); }} style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
               <I.XCircle size={15} /> Bekor qilish
             </button>
           )}
@@ -543,9 +562,13 @@ export function ContractView({ contractId, onBack }) {
               <h3 style={{ margin: 0 }}>Shartnomani bekor qilish</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setTerminateModal(false)}><I.X size={15} /></button>
             </div>
-            <div className="field" style={{ marginBottom: 14 }}>
+            <div className="field" style={{ marginBottom: 12 }}>
               <label>Bekor qilish sababi *</label>
               <textarea rows={3} value={terminateReason} onChange={e => setTerminateReason(e.target.value)} placeholder="Sababni kiriting..." />
+            </div>
+            <div className="field" style={{ marginBottom: 14 }}>
+              <label>Bekor qilish sanasi va vaqti *</label>
+              <input type="datetime-local" value={terminateAt} onChange={e => setTerminateAt(e.target.value)} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="btn ghost" onClick={() => setTerminateModal(false)}>Bekor</button>
@@ -2065,7 +2088,7 @@ export function TransactionsScreen({ onToast } = {}) {
                   <td style={{ padding: '0 8px' }} onClick={e => e.stopPropagation()}>
                     <input type="checkbox" checked={checked} onChange={e => setSelectedIds(p => e.target.checked ? [...p, t.id] : p.filter(x => x !== t.id))} />
                   </td>
-                  <td style={{ fontVariantNumeric: 'tabular-nums', cursor: 'pointer' }} onClick={() => openDetail(t.id)}>{(t.paid_at || t.created_at || '').slice(0, 10)}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums', cursor: 'pointer', fontSize: 12.5 }} onClick={() => openDetail(t.id)}>{(t.paid_at || t.created_at || '').slice(0, 16).replace('T', ' ')}</td>
                   <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id)}>{t.student_full_name || `#${t.student_id || '—'}`}</td>
                   <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id)}><span className="chip">{sourceLabel(t.source)}</span></td>
                   <td style={{ color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer' }} onClick={() => openDetail(t.id)}>{(t.payment_months || []).map(m => monthName(m)).join(', ') || '—'}</td>
@@ -2111,7 +2134,7 @@ export function TransactionsScreen({ onToast } = {}) {
                     ['Sana', (detail.paid_at || detail.created_at || '').slice(0, 19).replace('T', ' ')],
                     ['Oylar', (detail.payment_months || []).map(m => monthName(m)).join(', ') || '—'],
                     ["O'quvchi", detail.student_full_name || (detail.student_id ? `#${detail.student_id}` : '—')],
-                    ['Shartnoma', detail.contract_id ? `#${detail.contract_id}` : '—'],
+                    ['Shartnoma', detail.contract_number || (detail.contract_id ? `#${detail.contract_id}` : '—')],
                     ["To'lov yili", detail.payment_year || '—'],
                     ['External ID', detail.external_id || '—'],
                     ['Izoh', detail.comment || '—'],
@@ -2705,6 +2728,7 @@ export function ReportsScreen() {
                     <th>Shartnoma</th>
                     <th>Guruh</th>
                     <th>To'langan oylar</th>
+                    <th>Oxirgi to'lov</th>
                     <th style={{ textAlign: 'right' }}>Jami to'lov</th>
                   </tr>
                 </thead>
@@ -2725,6 +2749,9 @@ export function ReportsScreen() {
                               <span key={mi} className="chip success" style={{ fontSize: 11 }}>{MONTH_NAMES[m] || m}</span>
                             ))}
                           </div>
+                        </td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: 'var(--muted)' }}>
+                          {p.paid_at ? p.paid_at.slice(0, 16).replace('T', ' ') : (p.last_paid_at ? p.last_paid_at.slice(0, 16).replace('T', ' ') : '—')}
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
                           {fmt.format(p.total_paid || 0)} so'm
@@ -3064,6 +3091,8 @@ export function AuditLogsScreen() {
   const [toDate, setToDate] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
+  const [userFilter, setUserFilter] = React.useState('');
+  const [userFilterInput, setUserFilterInput] = React.useState('');
   const [detail, setDetail] = React.useState(null);
 
   async function loadData() {
@@ -3076,6 +3105,7 @@ export function AuditLogsScreen() {
       if (fromDate) params.from_date = fromDate + 'T00:00:00';
       if (toDate) params.to_date = toDate + 'T23:59:59';
       if (search) params.search = search;
+      if (userFilter) params.user_full_name = userFilter;
       const res = await apiGetAuditLogs(params);
       setRows(res?.data || []);
       const meta = res?.meta;
@@ -3088,7 +3118,7 @@ export function AuditLogsScreen() {
     }
   }
 
-  React.useEffect(() => { loadData(); }, [page, entityType, action, fromDate, toDate, search]);
+  React.useEffect(() => { loadData(); }, [page, entityType, action, fromDate, toDate, search, userFilter]);
 
   function actionChip(a) {
     const s = String(a || '').toUpperCase();
@@ -3100,7 +3130,7 @@ export function AuditLogsScreen() {
     return <span className="chip">{a || '—'}</span>;
   }
 
-  const hasFilters = entityType || action || fromDate || toDate || search;
+  const hasFilters = entityType || action || fromDate || toDate || search || userFilter;
 
   return (
     <div>
@@ -3134,11 +3164,15 @@ export function AuditLogsScreen() {
         <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <div style={{ display: 'flex', gap: 0 }}>
-          <input placeholder="Qidiruv..." value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 180 }} />
+          <input placeholder="Foydalanuvchi nomi..." value={userFilterInput} onChange={e => setUserFilterInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserFilter(userFilterInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
+          <button className="btn" style={{ borderRadius: '0 8px 8px 0', height: 36 }} onClick={() => { setUserFilter(userFilterInput); setPage(1); }}><I.Search size={14} /></button>
+        </div>
+        <div style={{ display: 'flex', gap: 0 }}>
+          <input placeholder="Qidiruv..." value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
           <button className="btn" style={{ borderRadius: '0 8px 8px 0', height: 36 }} onClick={() => { setSearch(searchInput); setPage(1); }}><I.Search size={14} /></button>
         </div>
         {hasFilters && (
-          <button className="btn ghost" onClick={() => { setEntityType(''); setAction(''); setFromDate(''); setToDate(''); setSearch(''); setSearchInput(''); setPage(1); }} style={{ height: 36, fontSize: 13 }}>
+          <button className="btn ghost" onClick={() => { setEntityType(''); setAction(''); setFromDate(''); setToDate(''); setSearch(''); setSearchInput(''); setUserFilter(''); setUserFilterInput(''); setPage(1); }} style={{ height: 36, fontSize: 13 }}>
             <I.X size={13} /> Tozalash
           </button>
         )}

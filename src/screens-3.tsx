@@ -23,7 +23,29 @@ function sessionStatus(session_date) {
   return 'completed';
 }
 
-export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = {}) {
+function GroupFormFields({ form, setForm, coaches }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="field">
+        <label>Guruh nomi <span className="req">*</span></label>
+        <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Masalan: Alpha-2012" />
+      </div>
+      <div className="field">
+        <label>Tavsif</label>
+        <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Qisqacha ma'lumot" />
+      </div>
+      <div className="field">
+        <label>Murabbiy</label>
+        <select value={form.coach_id} onChange={e => setForm(p => ({ ...p, coach_id: e.target.value }))}>
+          <option value="">Tanlanmagan</option>
+          {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup, onToast } = {}) {
   const I = Icon;
   const [groups, setGroups] = React.useState([]);
   const [coaches, setCoaches] = React.useState([]);
@@ -107,9 +129,10 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
       });
       setShowNew(false);
       setNewGroup({ name: '', description: '', coach_id: '' });
+      onToast?.(`"${newGroup.name.trim()}" guruhi qo'shildi`);
       await loadData();
     } catch (e) {
-      alert("Guruh yaratilmadi: " + e.message);
+      onToast?.('Xatolik: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -131,9 +154,10 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
         coach_id: editForm.coach_id ? Number(editForm.coach_id) : undefined,
       });
       setEditingGroup(null);
+      onToast?.(`Guruh yangilandi`);
       await loadData();
     } catch (e) {
-      alert('Yangilanmadi: ' + e.message);
+      onToast?.('Yangilanmadi: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -144,9 +168,10 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
     try {
       await apiDeleteGroup(g.id);
       setOpenMenuGroupId(null);
+      onToast?.(`"${g.name}" o'chirildi`);
       await loadData();
     } catch (e) {
-      alert("O'chirishda xatolik: " + e.message);
+      onToast?.("O'chirishda xatolik: " + e.message);
     }
   }
 
@@ -192,26 +217,6 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
   if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
 
   const selectedGroup = groupDetail || groups.find(g => g.id === selectedGroupId) || null;
-
-  const GroupFormFields = ({ form, setForm }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="field">
-        <label>Guruh nomi <span className="req">*</span></label>
-        <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Masalan: Alpha-2012" />
-      </div>
-      <div className="field">
-        <label>Tavsif</label>
-        <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Qisqacha ma'lumot" />
-      </div>
-      <div className="field">
-        <label>Murabbiy</label>
-        <select value={form.coach_id} onChange={e => setForm(p => ({ ...p, coach_id: e.target.value }))}>
-          <option value="">Tanlanmagan</option>
-          {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-        </select>
-      </div>
-    </div>
-  );
 
   return (
     <div>
@@ -412,7 +417,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Yangi guruh</h3>
               <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setShowNew(false)}><I.X size={16}/></button>
             </div>
-            <GroupFormFields form={newGroup} setForm={setNewGroup} />
+            <GroupFormFields form={newGroup} setForm={setNewGroup} coaches={coaches} />
             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
               <button className="btn ghost" onClick={() => setShowNew(false)}>Bekor</button>
               <button className="btn primary" onClick={handleCreateGroup} disabled={saving}>
@@ -431,7 +436,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup } = 
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Guruhni tahrirlash</h3>
               <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setEditingGroup(null)}><I.X size={16}/></button>
             </div>
-            <GroupFormFields form={editForm} setForm={setEditForm} />
+            <GroupFormFields form={editForm} setForm={setEditForm} coaches={coaches} />
             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
               <button className="btn ghost" onClick={() => setEditingGroup(null)}>Bekor</button>
               <button className="btn primary" onClick={handleEditGroup} disabled={saving}>

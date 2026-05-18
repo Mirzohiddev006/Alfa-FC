@@ -115,7 +115,7 @@ export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
   );
 }
 
-export function Topbar({ crumbs, role, onRoleSwitch, theme, onTheme, onSignOut, user, onNavigate }) {
+export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onTheme, onSignOut, user, onNavigate }) {
   const I = Icon;
   const [open, setOpen] = React.useState(false);
   const [searchQ, setSearchQ] = React.useState('');
@@ -213,22 +213,24 @@ export function Topbar({ crumbs, role, onRoleSwitch, theme, onTheme, onSignOut, 
               background: 'var(--surface)', border: '1px solid var(--border)',
               borderRadius: 10, boxShadow: 'var(--shadow-lg)', zIndex: 50, padding: 6,
             }} onMouseLeave={() => setOpen(false)}>
-              <div style={{ padding: '10px 12px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rolga o'tish</div>
-              {Object.keys(ROLE_PERMISSIONS).map(r => (
-                <div key={r}
-                  onClick={() => { onRoleSwitch(r); setOpen(false); }}
-                  style={{
-                    padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13,
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    background: r === role ? 'var(--selected)' : 'transparent',
-                    fontWeight: r === role ? 600 : 500,
-                  }}>
-                  <Icon.User size={14} color="var(--muted)"/>
-                  {r}
-                  {r === role && <Icon.Check size={14} color="var(--brand-red)" style={{ marginLeft: 'auto' }}/>}
-                </div>
-              ))}
-              <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }}></div>
+              {canSwitchRole && <>
+                <div style={{ padding: '10px 12px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rolga o'tish</div>
+                {Object.keys(ROLE_PERMISSIONS).map(r => (
+                  <div key={r}
+                    onClick={() => { onRoleSwitch(r); setOpen(false); }}
+                    style={{
+                      padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13,
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      background: r === role ? 'var(--selected)' : 'transparent',
+                      fontWeight: r === role ? 600 : 500,
+                    }}>
+                    <Icon.User size={14} color="var(--muted)"/>
+                    {r}
+                    {r === role && <Icon.Check size={14} color="var(--brand-red)" style={{ marginLeft: 'auto' }}/>}
+                  </div>
+                ))}
+                <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }}></div>
+              </>}
               <div onClick={onSignOut} style={{ padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--brand-red)' }}>
                 <Icon.Logout size={14}/> Chiqish
               </div>
