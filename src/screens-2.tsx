@@ -4,8 +4,8 @@ import { Icon } from './icons';
 import { MOCK } from './data';
 import {
   apiGetStudents, apiGetStudentFullInfo, apiGetStudentTransactions, apiGetStudentGateLogs,
-  apiGetGroups, apiCreateStudent, apiGetStudentsComprehensiveExportUrl,
-  apiImportStudents, apiGetStudentAttendanceReport, apiUpdateStudent,
+  apiGetGroups, apiCreateStudent, apiDownloadStudentsComprehensiveExport,
+  apiGetStudentAttendanceReport, apiUpdateStudent,
   apiDeleteStudent, apiDeleteStudentsBulk,
   apiUploadStudentPhoto, apiUploadStudentPassport, apiUploadStudentExtraFile,
   apiContractPdfUrl,
@@ -38,9 +38,6 @@ export function StudentsList({ onOpen, onNew, onToast }) {
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [totalCount, setTotalCount] = React.useState(0);
-  const [showImport, setShowImport] = React.useState(false);
-  const [importFile, setImportFile] = React.useState(null);
-  const [importing, setImporting] = React.useState(false);
   const [bulkDeleting, setBulkDeleting] = React.useState(false);
   const [openMenuStudentId, setOpenMenuStudentId] = React.useState(null);
   const [menuPos, setMenuPos] = React.useState({ x: 0, y: 0 });
@@ -119,29 +116,17 @@ export function StudentsList({ onOpen, onNew, onToast }) {
 
   async function handleExport() {
     try {
-      const url = await apiGetStudentsComprehensiveExportUrl();
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const blob = await apiDownloadStudentsComprehensiveExport();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `students-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
-      alert('Export ochilmadi: ' + e.message);
-    }
-  }
-
-  async function handleImport() {
-    if (!importFile) return;
-    setImporting(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', importFile);
-      await apiImportStudents(fd);
-      setShowImport(false);
-      setImportFile(null);
-      setSelected([]);
-      loadStudents();
-      onToast?.('Import muvaffaqiyatli bajarildi');
-    } catch (e) {
-      onToast?.('Import xatoligi: ' + e.message);
-    } finally {
-      setImporting(false);
+      alert('Export xatoligi: ' + e.message);
     }
   }
 
@@ -160,7 +145,6 @@ export function StudentsList({ onOpen, onNew, onToast }) {
               <I.Trash2 size={14}/> {bulkDeleting ? "O'chirilmoqda..." : `${selected.length} ta o'chirish`}
             </button>
           )}
-          <button className="btn" onClick={() => setShowImport(true)}><I.Upload size={15}/> Import</button>
           <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel export</button>
           <button className="btn primary" onClick={onNew}><I.UserPlus size={15}/> Yangi o'quvchi</button>
         </div>
@@ -193,7 +177,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
             <thead>
               <tr>
                 <th style={{ width: 36, paddingRight: 0 }}>
-                  <input type="checkbox" checked={allSelected} onChange={e => setSelected(e.target.checked ? paginated.map(s => s.id) : [])}/>
+                  <input type="checkbox" checked={allSelected} onChange={e => setSelected(e.target.checked ? students.map(s => s.id) : [])}/>
                 </th>
                 <th>Ism Familiya</th>
                 <th>Guruh</th>
@@ -279,27 +263,6 @@ export function StudentsList({ onOpen, onNew, onToast }) {
         </div>
       </div>
 
-      {showImport && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 120 }} onClick={() => setShowImport(false)}>
-          <div className="card" style={{ width: 520, padding: 18 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h3 style={{ margin: 0 }}>O'quvchilarni import qilish</h3>
-              <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setShowImport(false)}><I.X size={15} /></button>
-            </div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
-              Excel faylda `first_name`, `last_name`, `date_of_birth`, `height`, `weight`, `pnfl` ustunlari bo'lishi kerak.
-            </div>
-            <div className="field" style={{ marginBottom: 14 }}>
-              <label>Excel fayl</label>
-              <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn ghost" onClick={() => setShowImport(false)}>Bekor</button>
-              <button className="btn primary" onClick={handleImport} disabled={!importFile || importing}>{importing ? 'Yuklanmoqda...' : 'Import qilish'}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -749,12 +712,14 @@ export function StudentProfile({ studentId, onBack }) {
   );
 }
 
-export function StudentNew({ onBack, onCreated }) {
+export function StudentNew({ onBack, onCreated, onViewContract }) {
   const I = Icon;
   const [groups, setGroups] = React.useState([]);
   const [step, setStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [createdStudentId, setCreatedStudentId] = React.useState(null);
+  const [createdContractId, setCreatedContractId] = React.useState(null);
   const steps = ["O'quvchi ma'lumotlari", 'Ota-ona va shartnoma', 'Fayllar va tasdiqlash'];
 
   const [form, setForm] = React.useState({
@@ -793,13 +758,46 @@ export function StudentNew({ onBack, onCreated }) {
       if (files.photo) fd.append('photo', files.photo);
       if (files.passport) fd.append('passport', files.passport);
       if (files.extra_file) fd.append('extra_file', files.extra_file);
-      await apiCreateStudent(fd);
-      onCreated?.();
+      const result = await apiCreateStudent(fd);
+      const newStudentId = result?.data?.id || result?.id;
+      if (newStudentId) {
+        setCreatedStudentId(newStudentId);
+        try {
+          const fullInfo = await apiGetStudentFullInfo(newStudentId);
+          setCreatedContractId(fullInfo?.data?.contract?.id || null);
+        } catch { setCreatedContractId(null); }
+      } else {
+        onCreated?.();
+      }
     } catch (e) {
       setError(e.message || 'Xatolik yuz berdi');
     } finally {
       setSaving(false);
     }
+  }
+
+  if (createdStudentId !== null) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 420, gap: 20, padding: 40 }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <I.Check size={36} color="var(--success)"/>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>O'quvchi muvaffaqiyatli ro'yxatga olindi!</div>
+          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Shartnoma PDFi serverda tayyorlandi.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {createdContractId && (
+            <button className="btn primary" onClick={() => onViewContract?.(createdContractId)}>
+              <I.FileText size={14}/> Shartnomani ko'rish
+            </button>
+          )}
+          <button className="btn ghost" onClick={() => onCreated?.()}>
+            <I.ArrowLeft size={14}/> O'quvchilar ro'yxatiga qaytish
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -911,7 +909,7 @@ export function StudentNew({ onBack, onCreated }) {
             {step < 3 && <button className="btn primary" onClick={() => setStep(step + 1)}>Keyingi <I.ArrowRight size={14}/></button>}
             {step === 3 && (
               <button className="btn primary" onClick={handleSubmit} disabled={saving}>
-                <I.Check size={14}/> {saving ? 'Yuklanmoqda...' : "O'quvchini yaratish"}
+                <I.Check size={14}/> {saving ? 'Sizning xujjatingiz tayyorlanmoqda...' : "O'quvchini yaratish"}
               </button>
             )}
           </div>

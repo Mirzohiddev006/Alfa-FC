@@ -268,6 +268,15 @@ export async function apiGetStudentsComprehensiveExportUrl() {
   return `${BASE_URL}/students/comprehensive-export`;
 }
 
+export async function apiDownloadStudentsComprehensiveExport() {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/students/comprehensive-export`, { headers });
+  if (!res.ok) throw new Error(`Xatolik: ${res.status}`);
+  return res.blob();
+}
+
 export async function apiGetStudentsAttendanceAll(params = {}) {
   const q = new URLSearchParams(params).toString();
   return apiFetch(`/students/attendances/all${q ? '?' + q : ''}`);
