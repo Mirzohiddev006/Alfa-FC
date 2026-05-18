@@ -2738,7 +2738,6 @@ export function ReportsScreen() {
                     <th>Shartnoma</th>
                     <th>Guruh</th>
                     <th>To'langan oylar</th>
-                    <th>Oxirgi to'lov</th>
                     <th style={{ textAlign: 'right' }}>Jami to'lov</th>
                   </tr>
                 </thead>
@@ -2759,9 +2758,6 @@ export function ReportsScreen() {
                               <span key={mi} className="chip success" style={{ fontSize: 11 }}>{MONTH_NAMES[m] || m}</span>
                             ))}
                           </div>
-                        </td>
-                        <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: 'var(--muted)' }}>
-                          {p.paid_at ? p.paid_at.slice(0, 16).replace('T', ' ') : (p.last_paid_at ? p.last_paid_at.slice(0, 16).replace('T', ' ') : '—')}
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>
                           {fmt.format(p.total_paid || 0)} so'm
