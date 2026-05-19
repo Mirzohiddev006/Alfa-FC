@@ -8,6 +8,7 @@ import { GroupsScreen, SessionsScreen, AttendanceMark, PerformanceTable } from '
 import { ContractsScreen, ContractView, GateScreen, UsersScreen, SettingsScreen, TransactionsScreen, ReportsScreen, WaitingListScreen, AuditLogsScreen } from './screens-4';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor } from './tweaks-panel';
 import { apiGetMe, apiLogout, getToken, setUnauthorizedHandler } from './api';
+import { LangProvider } from './lang';
 
 const __TWEAK_DEFAULTS = {
   theme: 'light',
@@ -88,14 +89,16 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-        <div style={{ fontSize: 15, color: 'var(--muted)' }}>Yuklanmoqda...</div>
-      </div>
+      <LangProvider>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+          <div style={{ fontSize: 15, color: 'var(--muted)' }}>Загрузка...</div>
+        </div>
+      </LangProvider>
     );
   }
 
   if (!loggedIn) {
-    return <LoginScreen onLogin={() => setLoggedIn(true)}/>;
+    return <LangProvider><LoginScreen onLogin={() => setLoggedIn(true)}/></LangProvider>;
   }
 
   let crumbs = ['Alpha CIMS'];
@@ -121,6 +124,7 @@ export default function App() {
   if (route === 'audit-logs') crumbs.push('Audit log');
 
   return (
+    <LangProvider>
     <div className="app" data-nav={navCollapsed ? 'collapsed' : 'expanded'}>
       <Sidebar
         active={activeNav}
@@ -180,6 +184,7 @@ export default function App() {
 
       <AlphaTweaks T={T}/>
     </div>
+    </LangProvider>
   );
 }
 

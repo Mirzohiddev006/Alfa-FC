@@ -4,9 +4,11 @@ import { Icon } from './icons';
 import { AlphaShield } from './logo';
 import { MOCK } from './data';
 import { apiLogin, apiGetDashboard, apiGetGroups, apiGetSessions } from './api';
+import { useT } from './lang';
 
 export function LoginScreen({ onLogin }) {
   const I = Icon;
+  const { t } = useT();
   const [showPw, setShowPw] = React.useState(false);
   const [phone, setPhone] = React.useState('');
   const [pw, setPw] = React.useState('');
@@ -21,7 +23,7 @@ export function LoginScreen({ onLogin }) {
       await apiLogin(phone.trim(), pw);
       onLogin();
     } catch (err) {
-      setError(err.message || 'Login yoki parol noto\'g\'ri');
+      setError(err.message || t('login_error_default'));
     } finally {
       setLoading(false);
     }
@@ -55,21 +57,20 @@ export function LoginScreen({ onLogin }) {
         </div>
         <div style={{ position: 'relative' }}>
           <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: 16, textWrap: 'pretty' }}>
-            Akademiya boshqaruvini bir joyda.
+            {t('login_hero')}
           </div>
           <div style={{ fontSize: 15, opacity: 0.78, maxWidth: 460, lineHeight: 1.55 }}>
-            O'quvchilar, guruhlar, davomat, shartnoma va to'lovlar —
-            yagona tizimda. 360° o'quvchi profili va real vaqt darvoza kuzatuvi bilan.
+            {t('login_hero_sub')}
           </div>
           <div style={{ marginTop: 36, display: 'flex', gap: 26, flexWrap: 'wrap' }}>
             {[
-              { v: '320+', l: "O'quvchi" },
-              { v: '24', l: 'Guruh' },
-              { v: '99.2%', l: "Davomat aniqligi" },
+              { v: '320+', lk: 'login_stat_students' },
+              { v: '24', lk: 'login_stat_groups' },
+              { v: '99.2%', lk: 'login_stat_accuracy' },
             ].map(s => (
-              <div key={s.l}>
+              <div key={s.lk}>
                 <div style={{ fontSize: 26, fontWeight: 700 }}>{s.v}</div>
-                <div style={{ fontSize: 12, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.l}</div>
+                <div style={{ fontSize: 12, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t(s.lk)}</div>
               </div>
             ))}
           </div>
@@ -79,30 +80,30 @@ export function LoginScreen({ onLogin }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
         <form onSubmit={submit} style={{ width: '100%', maxWidth: 380 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 8px' }}>Tizimga kirish</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 30px' }}>Akkountingiz bilan davom eting</p>
+          <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 8px' }}>{t('login_title')}</h1>
+          <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 30px' }}>{t('login_subtitle')}</p>
           <div className="field" style={{ marginBottom: 14 }}>
-            <label>Telefon yoki email</label>
+            <label>{t('login_phone_label')}</label>
             <div style={{ position: 'relative' }}>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+998 90 123 45 67" style={{ width: '100%', paddingLeft: 38 }}/>
               <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}><I.Phone size={15}/></span>
             </div>
           </div>
           <div className="field" style={{ marginBottom: 14 }}>
-            <label>Parol</label>
+            <label>{t('login_password_label')}</label>
             <div style={{ position: 'relative' }}>
               <input type={showPw ? 'text' : 'password'} value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" style={{ width: '100%', paddingLeft: 38, paddingRight: 38 }}/>
               <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}><I.Lock size={15}/></span>
               <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--muted)', padding: 6 }}>
-                {showPw ? <I.EyeOff size={15}/> : <I.Eye size={15}/>} 
+                {showPw ? <I.EyeOff size={15}/> : <I.Eye size={15}/>}
               </button>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 22px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' }}>
-              <input type="checkbox" defaultChecked/> Meni eslab qol
+              <input type="checkbox" defaultChecked/> {t('login_remember')}
             </label>
-            <a href="#" style={{ fontSize: 13, color: 'var(--brand-red)', textDecoration: 'none', fontWeight: 600 }}>Parolni unutdingizmi?</a>
+            <a href="#" style={{ fontSize: 13, color: 'var(--brand-red)', textDecoration: 'none', fontWeight: 600 }}>{t('login_forgot')}</a>
           </div>
           {error && (
             <div style={{ marginBottom: 14, padding: '10px 14px', background: 'var(--accent-soft)', border: '1px solid var(--brand-red)', borderRadius: 8, fontSize: 13, color: 'var(--brand-red)', fontWeight: 500 }}>
@@ -110,7 +111,7 @@ export function LoginScreen({ onLogin }) {
             </div>
           )}
           <button className="btn primary" type="submit" style={{ width: '100%', height: 44, justifyContent: 'center' }} disabled={loading}>
-            {loading ? 'Tekshirilmoqda...' : 'Kirish'} {!loading && <I.ArrowRight size={16}/>} 
+            {loading ? t('login_checking') : t('login_btn')} {!loading && <I.ArrowRight size={16}/>}
           </button>
         </form>
       </div>
@@ -140,6 +141,7 @@ function fmtMln(v) {
 
 export function Dashboard({ role, onNav }) {
   const I = Icon;
+  const { t } = useT();
   const [summary, setSummary] = React.useState(null);
   const [todaySessions, setTodaySessions] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
@@ -167,23 +169,23 @@ export function Dashboard({ role, onNav }) {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Bosh sahifa</h1>
-          <div className="page-sub">Bugun · {loading ? '...' : (summary?.today_sessions ?? todaySessions.length) + ' ta sessiya rejalashtirilgan'}</div>
+          <h1 className="page-title">{t('dashboard_title')}</h1>
+          <div className="page-sub">{t('dashboard_today')} · {loading ? '...' : (summary?.today_sessions ?? todaySessions.length) + ' ' + t('dashboard_sessions_today')}</div>
         </div>
         <div className="page-actions">
-          <button className="btn primary" onClick={() => onNav('students-new')}><I.Plus size={15}/> Yangi o'quvchi</button>
+          <button className="btn primary" onClick={() => onNav('students-new')}><I.Plus size={15}/> {t('dashboard_new_student')}</button>
         </div>
       </div>
 
       <div className="grid-4">
         {[
-          { label: "Faol o'quvchilar", value: loading ? '...' : (summary?.active_students ?? '-'), spark: [60,62,64,68,70,75,78,80,82,84], color: 'var(--brand-navy)' },
-          { label: "Bugun sessiyalar", value: loading ? '...' : (summary?.today_sessions ?? '-'), spark: [2,3,2,3,4,3,4,3,4,3], color: 'var(--success)' },
-          { label: 'Oylik tushum (30 kun)', value: loading ? '...' : fmtMln(inflow30), spark: trendPoints.length > 1 ? trendPoints : [0,1], color: 'var(--brand-gold)' },
-          { label: 'Qarzdorlar', value: loading ? '...' : (summary?.total_debtors ?? '-'), spark: [8,9,8,10,11,10,9,10,11,12], color: 'var(--brand-red)' },
+          { labelKey: 'dashboard_stat_active_students', value: loading ? '...' : (summary?.active_students ?? '-'), spark: [60,62,64,68,70,75,78,80,82,84], color: 'var(--brand-navy)' },
+          { labelKey: 'dashboard_stat_today_sessions', value: loading ? '...' : (summary?.today_sessions ?? '-'), spark: [2,3,2,3,4,3,4,3,4,3], color: 'var(--success)' },
+          { labelKey: 'dashboard_stat_monthly', value: loading ? '...' : fmtMln(inflow30), spark: trendPoints.length > 1 ? trendPoints : [0,1], color: 'var(--brand-gold)' },
+          { labelKey: 'dashboard_stat_debtors', value: loading ? '...' : (summary?.total_debtors ?? '-'), spark: [8,9,8,10,11,10,9,10,11,12], color: 'var(--brand-red)' },
         ].map(s => (
-          <div key={s.label} className="stat">
-            <div className="stat-label">{s.label}</div>
+          <div key={s.labelKey} className="stat">
+            <div className="stat-label">{t(s.labelKey)}</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
               <div className="stat-value">{s.value}</div>
               <div style={{ width: 100 }}><MiniSpark values={s.spark} color={s.color}/></div>
@@ -198,12 +200,12 @@ export function Dashboard({ role, onNav }) {
         <div className="card">
           <div className="card-header">
             <I.Calendar size={16} color="var(--muted)"/>
-            <div className="card-title">Bugungi sessiyalar</div>
-            <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('sessions')}>Hammasini ko'rish <I.ArrowRight size={13}/></button>
+            <div className="card-title">{t('dashboard_today_sessions')}</div>
+            <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('sessions')}>{t('dashboard_view_all')} <I.ArrowRight size={13}/></button>
           </div>
           <div style={{ padding: 6 }}>
-            {loading && <div className="empty">Yuklanmoqda...</div>}
-            {!loading && todaySessions.length === 0 && <div className="empty">Bugun sessiyalar yo'q</div>}
+            {loading && <div className="empty">{t('loading')}</div>}
+            {!loading && todaySessions.length === 0 && <div className="empty">{t('dashboard_no_sessions')}</div>}
             {todaySessions.map((s) => (
               <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '74px 1fr', gap: 14, padding: '12px 14px', borderRadius: 8, alignItems: 'center' }}>
                 <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
@@ -211,7 +213,7 @@ export function Dashboard({ role, onNav }) {
                   <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{s.end_time || ''}</div>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>{s.topic || 'Trening'}</div>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>{s.topic || t('dashboard_training')}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 12, alignItems: 'center' }}>
                     {s.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.MapPin size={12}/> {s.location}</span>}
                   </div>
@@ -224,11 +226,11 @@ export function Dashboard({ role, onNav }) {
         <div className="card">
           <div className="card-header">
             <I.Group size={16} color="var(--muted)"/>
-            <div className="card-title">Guruhlar</div>
-            <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('groups')}>Barchasi <I.ArrowRight size={13}/></button>
+            <div className="card-title">{t('dashboard_groups')}</div>
+            <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('groups')}>{t('dashboard_all_groups')} <I.ArrowRight size={13}/></button>
           </div>
           <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {loading && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Yuklanmoqda...</div>}
+            {loading && <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t('loading')}</div>}
             {groups.slice(0, 6).map(g => {
               const count = g.active_students_count || 0;
               const maxCapacity = 25;
@@ -254,14 +256,14 @@ export function Dashboard({ role, onNav }) {
       <div className="card">
         <div className="card-header">
           <I.Wallet size={16} color="var(--muted)"/>
-          <div className="card-title">Moliya — so'nggi 30 kun</div>
-          <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('transactions')}>Tranzaksiyalar <I.ArrowRight size={13}/></button>
+          <div className="card-title">{t('dashboard_finance')}</div>
+          <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('transactions')}>{t('dashboard_transactions')} <I.ArrowRight size={13}/></button>
         </div>
         <div style={{ padding: 18, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           {[
-            { label: 'Jami tushum', value: fmtMln(m30?.total_inflow), color: 'var(--success)' },
-            { label: 'Tranzaksiyalar', value: (m30?.successful_transactions || 0) + ' ta', color: 'var(--brand-navy)' },
-            ...( m30?.source_breakdown?.map(s => ({ label: s.source === 'payme' ? 'Payme' : s.source === 'click' ? 'Click' : 'Boshqa', value: fmtMln(s.amount), color: 'var(--brand-gold)' })) || []),
+            { label: t('dashboard_total_income'), value: fmtMln(m30?.total_inflow), color: 'var(--success)' },
+            { label: t('dashboard_transactions'), value: (m30?.successful_transactions || 0) + ' ta', color: 'var(--brand-navy)' },
+            ...( m30?.source_breakdown?.map(s => ({ label: s.source === 'payme' ? 'Payme' : s.source === 'click' ? 'Click' : (t('lang_uz') === "O'ZBEK" ? 'Boshqa' : 'Другое'), value: fmtMln(s.amount), color: 'var(--brand-gold)' })) || []),
           ].map((item, i) => (
             <div key={i} style={{ flex: '1 1 140px', padding: 14, background: 'var(--surface-2)', borderRadius: 10 }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>

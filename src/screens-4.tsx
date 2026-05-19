@@ -2,6 +2,7 @@
 import React from 'react';
 import { Icon } from './icons';
 import { SearchableGroupSelect } from './components';
+import { useT } from './lang';
 import {
   apiGetContracts,
   apiGetContract,
@@ -91,12 +92,12 @@ function Stat({ label, value, sub, tone = 'default', icon: Ic }) {
   );
 }
 
-function statusChip(status) {
+function statusChip(status, t = (k) => k) {
   const s = (status || '').toUpperCase();
-  if (s === 'ACTIVE') return <span className="chip success"><span className="chip-dot"></span>Faol</span>;
-  if (s === 'TERMINATED') return <span className="chip danger"><span className="chip-dot"></span>Bekor</span>;
-  if (s === 'EXPIRED') return <span className="chip warning"><span className="chip-dot"></span>Tugagan</span>;
-  if (s === 'ARCHIVED') return <span className="chip"><span className="chip-dot"></span>Arxiv</span>;
+  if (s === 'ACTIVE') return <span className="chip success"><span className="chip-dot"></span>{t('status_active')}</span>;
+  if (s === 'TERMINATED') return <span className="chip danger"><span className="chip-dot"></span>{t('status_terminated')}</span>;
+  if (s === 'EXPIRED') return <span className="chip warning"><span className="chip-dot"></span>{t('status_cancelled')}</span>;
+  if (s === 'ARCHIVED') return <span className="chip"><span className="chip-dot"></span>{t('status_archived')}</span>;
   return <span className="chip">{status || '—'}</span>;
 }
 
@@ -104,6 +105,7 @@ function statusChip(status) {
 
 export function ContractsScreen({ onOpenContract, onToast }) {
   const I = Icon;
+  const { t } = useT();
   const [contracts, setContracts] = React.useState([]);
   const [terminated, setTerminated] = React.useState([]);
   const [stats, setStats] = React.useState(null);
@@ -179,10 +181,10 @@ export function ContractsScreen({ onOpenContract, onToast }) {
         terminated_at: terminateAt ? new Date(terminateAt).toISOString() : new Date().toISOString(),
       });
       setTerminateModal(false);
-      onToast?.('Shartnoma tugatildi');
+      onToast?.(t('toast_contract_terminated'));
       loadActive({ page: 1 });
     } catch (e) {
-      onToast?.('Bekor qilish xatosi: ' + e.message);
+      onToast?.(e.message);
     }
   }
 
@@ -192,33 +194,33 @@ export function ContractsScreen({ onOpenContract, onToast }) {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Shartnomalar</h1>
-          <div className="page-sub">{totalCount} ta shartnoma</div>
+          <h1 className="page-title">{t('contracts_title')}</h1>
+          <div className="page-sub">{totalCount} ta {t('nav_contracts').toLowerCase()}</div>
         </div>
       </div>
 
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 14 }}>
-          <Stat label="Jami" value={stats.total || 0} icon={I.FileText} />
-          <Stat label="Faol" value={stats.active || 0} tone="success" icon={I.Check} />
-          <Stat label="Bekor qilingan" value={stats.terminated || 0} tone="danger" icon={I.XCircle} />
-          <Stat label="Tugagan" value={stats.expired || 0} tone="warning" icon={I.Clock} />
-          <Stat label="Jami oylik" value={`${fmt.format(stats.total_monthly_fee || 0)} so'm`} tone="navy" icon={I.Wallet} />
+          <Stat label={t('all')} value={stats.total || 0} icon={I.FileText} />
+          <Stat label={t('status_active')} value={stats.active || 0} tone="success" icon={I.Check} />
+          <Stat label={t('status_terminated')} value={stats.terminated || 0} tone="danger" icon={I.XCircle} />
+          <Stat label={t('status_cancelled')} value={stats.expired || 0} tone="warning" icon={I.Clock} />
+          <Stat label={t('contracts_total_monthly')} value={`${fmt.format(stats.total_monthly_fee || 0)} so'm`} tone="navy" icon={I.Wallet} />
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
         {[
-          { key: 'active', label: 'Faol shartnomalar' },
-          { key: 'terminated', label: 'Bekor qilinganlar' },
-        ].map(t => (
+          { key: 'active', labelKey: 'status_active' },
+          { key: 'terminated', labelKey: 'status_terminated' },
+        ].map(tb => (
           <button
-            key={t.key}
-            className={`btn${tab === t.key ? ' primary' : ' ghost'}`}
+            key={tb.key}
+            className={`btn${tab === tb.key ? ' primary' : ' ghost'}`}
             style={{ fontSize: 13 }}
-            onClick={() => setTab(t.key)}
+            onClick={() => setTab(tb.key)}
           >
-            {t.label}
+            {t(tb.labelKey)}
           </button>
         ))}
       </div>
@@ -227,7 +229,7 @@ export function ContractsScreen({ onOpenContract, onToast }) {
         <div className="table-toolbar">
           <div className="search" style={{ maxWidth: 320 }}>
             <span className="icon-l"><I.Search size={15} /></span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Shartnoma raqami yoki mijoz..." />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('contracts_search')} />
           </div>
           {tab === 'active' && (
             <select
@@ -235,32 +237,32 @@ export function ContractsScreen({ onOpenContract, onToast }) {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}
             >
-              <option value="all">Barcha statuslar</option>
-              <option value="ACTIVE">Faol</option>
-              <option value="EXPIRED">Tugagan</option>
-              <option value="ARCHIVED">Arxivlangan</option>
+              <option value="all">{t('contracts_all_statuses')}</option>
+              <option value="ACTIVE">{t('status_active')}</option>
+              <option value="EXPIRED">{t('status_cancelled')}</option>
+              <option value="ARCHIVED">{t('status_archived')}</option>
             </select>
           )}
-          <div style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{rows.length} natija</div>
+          <div style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{rows.length} {t('students_results')}</div>
         </div>
 
         {loading ? (
-          <div className="empty" style={{ padding: 32 }}>Yuklanmoqda...</div>
+          <div className="empty" style={{ padding: 32 }}>{t('loading')}</div>
         ) : (
           <table className="table">
             <thead>
               <tr>
-                <th>Shartnoma №</th>
-                <th>Mijoz</th>
-                <th>Davr</th>
-                <th>Oylik to'lov</th>
-                <th>Status</th>
+                <th>{t('contracts_col_number')}</th>
+                <th>{t('contracts_col_student')}</th>
+                <th>{t('contracts_col_start')} / {t('contracts_col_end')}</th>
+                <th>{t('contracts_col_fee')}</th>
+                <th>{t('contracts_col_status')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: 18, color: 'var(--muted)' }}>Shartnoma topilmadi</td></tr>
+                <tr><td colSpan={7} style={{ padding: 18, color: 'var(--muted)' }}>{t('contracts_not_found')}</td></tr>
               )}
               {rows.map((c) => (
                 <tr key={c.id} onClick={() => onOpenContract?.(c.id)} style={{ cursor: 'pointer' }}>
@@ -270,11 +272,11 @@ export function ContractsScreen({ onOpenContract, onToast }) {
                     {c.start_date || '—'} <span style={{ color: 'var(--muted)' }}>→</span> {c.end_date || '—'}
                   </td>
                   <td style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt.format(c.monthly_fee || 0)} so'm</td>
-                  <td>{statusChip(c.status)}</td>
+                  <td>{statusChip(c.status, t)}</td>
                   <td onClick={e => e.stopPropagation()}>
                     {c.status === 'ACTIVE' && (
                       <button className="btn ghost sm" style={{ color: 'var(--brand-red)', fontSize: 12 }} onClick={() => openTerminate(c)}>
-                        <I.XCircle size={13} /> Tugatish
+                        <I.XCircle size={13} /> {t('contracts_terminate')}
                       </button>
                     )}
                   </td>
@@ -286,9 +288,9 @@ export function ContractsScreen({ onOpenContract, onToast }) {
 
         {tab === 'active' && totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '10px 0' }}>
-            <button className="btn ghost sm" disabled={page <= 1} onClick={() => { const p = page - 1; setPage(p); loadActive({ page: p }); }}>‹ Oldingi</button>
+            <button className="btn ghost sm" disabled={page <= 1} onClick={() => { const p = page - 1; setPage(p); loadActive({ page: p }); }}>‹ {t('prev')}</button>
             <span style={{ lineHeight: '30px', fontSize: 13, color: 'var(--muted)' }}>{page} / {totalPages}</span>
-            <button className="btn ghost sm" disabled={page >= totalPages} onClick={() => { const p = page + 1; setPage(p); loadActive({ page: p }); }}>Keyingi ›</button>
+            <button className="btn ghost sm" disabled={page >= totalPages} onClick={() => { const p = page + 1; setPage(p); loadActive({ page: p }); }}>{t('next')} ›</button>
           </div>
         )}
       </div>
@@ -297,22 +299,22 @@ export function ContractsScreen({ onOpenContract, onToast }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setTerminateModal(false)}>
           <div className="card" style={{ width: 440, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Shartnomani bekor qilish</h3>
+              <h3 style={{ margin: 0 }}>{t('contracts_terminate_title')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setTerminateModal(false)}><I.X size={15} /></button>
             </div>
-            <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--muted)' }}>Shartnoma: <strong>{terminating?.contract_number}</strong></div>
+            <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--muted)' }}>{t('nav_contracts')}: <strong>{terminating?.contract_number}</strong></div>
             <div className="field" style={{ marginBottom: 12 }}>
-              <label>Bekor qilish sababi *</label>
-              <textarea rows={3} value={terminateReason} onChange={e => setTerminateReason(e.target.value)} placeholder="Sababni kiriting..." />
+              <label>{t('transactions_comment')} *</label>
+              <textarea rows={3} value={terminateReason} onChange={e => setTerminateReason(e.target.value)} placeholder="" />
             </div>
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Bekor qilish sanasi va vaqti *</label>
+              <label>{t('contracts_terminated_at')} *</label>
               <input type="datetime-local" value={terminateAt} onChange={e => setTerminateAt(e.target.value)} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn ghost" onClick={() => setTerminateModal(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setTerminateModal(false)}>{t('cancel')}</button>
               <button className="btn" style={{ background: 'var(--brand-red)', color: '#fff', border: 'none' }} onClick={confirmTerminate} disabled={!terminateReason.trim()}>
-                <I.XCircle size={14} /> Bekor qilish
+                <I.XCircle size={14} /> {t('contracts_terminate')}
               </button>
             </div>
           </div>
@@ -324,6 +326,7 @@ export function ContractsScreen({ onOpenContract, onToast }) {
 
 export function ContractView({ contractId, onBack, onToast }) {
   const I = Icon;
+  const { t } = useT();
   const [contract, setContract] = React.useState(null);
   const [student, setStudent] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -376,7 +379,7 @@ export function ContractView({ contractId, onBack, onToast }) {
       await apiRegenerateContractPdf(contractId);
       await openPdf();
     } catch (e) {
-      alert('Qayta generatsiya xatosi: ' + e.message);
+      alert(e.message);
     } finally {
       setRegenerating(false);
     }
@@ -391,10 +394,10 @@ export function ContractView({ contractId, onBack, onToast }) {
         terminated_at: terminateAt ? new Date(terminateAt).toISOString() : new Date().toISOString(),
       });
       setTerminateModal(false);
-      onToast?.('Shartnoma tugatildi');
+      onToast?.(t('toast_contract_terminated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally { setSaving(false); }
   }
 
@@ -404,10 +407,10 @@ export function ContractView({ contractId, onBack, onToast }) {
     try {
       await apiPatchContractMonthlyFee(contractId, { monthly_fee_amount: Number(newFee) });
       setFeeModal(false);
-      onToast?.("Oylik to'lov yangilandi");
+      onToast?.(t('toast_monthly_updated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally { setSaving(false); }
   }
 
@@ -417,10 +420,10 @@ export function ContractView({ contractId, onBack, onToast }) {
     try {
       await apiPatchContractDates(contractId, { start_date: datesForm.start_date, end_date: datesForm.end_date });
       setDatesModal(false);
-      onToast?.('Sanalar yangilandi');
+      onToast?.(t('toast_dates_updated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally { setSaving(false); }
   }
 
@@ -439,10 +442,10 @@ export function ContractView({ contractId, onBack, onToast }) {
       };
       await apiUpdateContract(contractId, body);
       setEditModal(false);
-      onToast?.('Shartnoma yangilandi');
+      onToast?.(t('toast_contract_updated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally { setSaving(false); }
   }
 
@@ -452,15 +455,15 @@ export function ContractView({ contractId, onBack, onToast }) {
     try {
       await apiPatchContractStatus(contractId, { status: newStatus });
       setStatusModal(false);
-      onToast?.('Status yangilandi');
+      onToast?.(t('toast_status_updated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally { setSaving(false); }
   }
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
-  if (!contract) return <div className="empty" style={{ padding: 48 }}>Shartnoma topilmadi</div>;
+  if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
+  if (!contract) return <div className="empty" style={{ padding: 48 }}>{t('contracts_not_found')}</div>;
 
   const cf = contract.custom_fields || {};
   const cust = cf.customer || {};
@@ -468,11 +471,11 @@ export function ContractView({ contractId, onBack, onToast }) {
 
   return (
     <div>
-      <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14} /> Shartnomalar</button>
+      <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14} /> {t('contracts_title')}</button>
       <div className="page-head">
         <div>
           <h1 className="page-title">{contract.contract_number}</h1>
-          <div className="page-sub">Shartnoma ma'lumotlari va PDF</div>
+          <div className="page-sub">{t('contracts_detail_subtitle')}</div>
         </div>
         <div className="page-actions">
           <button className="btn ghost" onClick={() => {
@@ -484,44 +487,44 @@ export function ContractView({ contractId, onBack, onToast }) {
             });
             setEditModal(true);
           }}>
-            <I.Edit size={15} /> Tahrirlash
+            <I.Edit size={15} /> {t('edit')}
           </button>
           <button className="btn ghost" onClick={() => {
             setDatesForm({ start_date: contract.start_date || '', end_date: contract.end_date || '' });
             setDatesModal(true);
           }}>
-            <I.Calendar size={15} /> Sanalarni o'zgartirish
+            <I.Calendar size={15} /> {t('contracts_change_dates_btn')}
           </button>
           {contract.status !== 'TERMINATED' && (
             <button className="btn ghost" onClick={() => { setNewStatus(contract.status); setStatusModal(true); }}>
-              <I.ShieldOff size={15} /> Status
+              <I.ShieldOff size={15} /> {t('contracts_change_status_title')}
             </button>
           )}
           {contract.status === 'ACTIVE' && (
             <button className="btn ghost" onClick={() => { setTerminateReason(''); const _n = new Date(); _n.setMinutes(_n.getMinutes() - _n.getTimezoneOffset()); setTerminateAt(_n.toISOString().slice(0, 16)); setTerminateModal(true); }} style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
-              <I.XCircle size={15} /> Bekor qilish
+              <I.XCircle size={15} /> {t('contracts_cancel_modal_title')}
             </button>
           )}
-          <button className="btn" onClick={openPdf}><I.FileText size={15} /> PDF ochish</button>
+          <button className="btn" onClick={openPdf}><I.FileText size={15} /> {t('contracts_pdf_open_btn')}</button>
           <button className="btn primary" onClick={regenerate} disabled={regenerating}>
-            <I.RefreshCw size={15} /> {regenerating ? 'Yuklanmoqda...' : 'PDF qayta yaratish'}
+            <I.RefreshCw size={15} /> {regenerating ? t('loading') : t('contracts_pdf_regen_btn')}
           </button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 18 }}>
-          <div className="card-title" style={{ marginBottom: 12 }}>Asosiy ma'lumotlar</div>
+          <div className="card-title" style={{ marginBottom: 12 }}>{t('contracts_info_card')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {[
-              ['Shartnoma raqami', contract.contract_number],
-              ['Status', statusChip(contract.status)],
-              ["O'quvchi", studentName],
-              ['Mijoz', cust.full_name || '—'],
-              ['Boshlanish sanasi', contract.start_date || '—'],
-              ['Tugash sanasi', contract.end_date || '—'],
-              ["Oylik to'lov", `${fmt.format(contract.monthly_fee || 0)} so'm`],
-              ['Shartnoma yili', contract.contract_year || '—'],
+              [t('contracts_contract_number_label'), contract.contract_number],
+              [t('contracts_status'), statusChip(contract.status, t)],
+              [t('contracts_student'), studentName],
+              [t('contracts_client_label'), cust.full_name || '—'],
+              [t('contracts_start_date'), contract.start_date || '—'],
+              [t('contracts_end_date'), contract.end_date || '—'],
+              [t('contracts_monthly_fee'), `${fmt.format(contract.monthly_fee || 0)} so'm`],
+              [t('contracts_contract_year_label'), contract.contract_year || '—'],
             ].map(([k, v]) => (
               <div key={k}>
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>{k}</div>
@@ -532,13 +535,13 @@ export function ContractView({ contractId, onBack, onToast }) {
         </div>
 
         <div className="card" style={{ padding: 18 }}>
-          <div className="card-title" style={{ marginBottom: 12 }}>Qo'shimcha</div>
+          <div className="card-title" style={{ marginBottom: 12 }}>{t('contracts_extra_card')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              ['Pasport', cust.passport_number || '—'],
-              ['Manzil', cust.address || '—'],
-              ["Tug'ilish yili", contract.birth_year || '—'],
-              ['Yaratilgan', (contract.created_at || '').slice(0, 19).replace('T', ' ') || '—'],
+              [t('contracts_passport_label'), cust.passport_number || '—'],
+              [t('profile_address'), cust.address || '—'],
+              [t('contracts_birth_year_label'), contract.birth_year || '—'],
+              [t('contracts_created'), (contract.created_at || '').slice(0, 19).replace('T', ' ') || '—'],
             ].map(([l, v]) => (
               <div key={l} style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 8 }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{l}</div>
@@ -548,7 +551,7 @@ export function ContractView({ contractId, onBack, onToast }) {
           </div>
           {contract.termination_reason && (
             <div style={{ marginTop: 10, padding: 10, background: 'var(--accent-soft)', borderRadius: 8, border: '1px solid var(--brand-red)' }}>
-              <div style={{ fontSize: 11, color: 'var(--brand-red)', fontWeight: 700 }}>Bekor qilish sababi</div>
+              <div style={{ fontSize: 11, color: 'var(--brand-red)', fontWeight: 700 }}>{t('contracts_termination_reason_label')}</div>
               <div style={{ fontSize: 13 }}>{contract.termination_reason}</div>
             </div>
           )}
@@ -560,21 +563,21 @@ export function ContractView({ contractId, onBack, onToast }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setTerminateModal(false)}>
           <div className="card" style={{ width: 440, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Shartnomani bekor qilish</h3>
+              <h3 style={{ margin: 0 }}>{t('contracts_cancel_modal_title')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setTerminateModal(false)}><I.X size={15} /></button>
             </div>
             <div className="field" style={{ marginBottom: 12 }}>
-              <label>Bekor qilish sababi *</label>
-              <textarea rows={3} value={terminateReason} onChange={e => setTerminateReason(e.target.value)} placeholder="Sababni kiriting..." />
+              <label>{t('contracts_cancel_reason_field')}</label>
+              <textarea rows={3} value={terminateReason} onChange={e => setTerminateReason(e.target.value)} placeholder="" />
             </div>
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Bekor qilish sanasi va vaqti *</label>
+              <label>{t('contracts_cancel_date_field')}</label>
               <input type="datetime-local" value={terminateAt} onChange={e => setTerminateAt(e.target.value)} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn ghost" onClick={() => setTerminateModal(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setTerminateModal(false)}>{t('cancel')}</button>
               <button className="btn" style={{ background: 'var(--brand-red)', color: '#fff', border: 'none' }} onClick={confirmTerminate} disabled={saving || !terminateReason.trim()}>
-                {saving ? 'Yuklanmoqda...' : 'Bekor qilish'}
+                {saving ? t('loading') : t('contracts_cancel_modal_title')}
               </button>
             </div>
           </div>
@@ -586,17 +589,17 @@ export function ContractView({ contractId, onBack, onToast }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setFeeModal(false)}>
           <div className="card" style={{ width: 380, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Oylik to'lovni o'zgartirish</h3>
+              <h3 style={{ margin: 0 }}>{t('contracts_edit_fee')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setFeeModal(false)}><I.X size={15} /></button>
             </div>
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Yangi oylik to'lov (so'm) *</label>
+              <label>{t('contracts_new_fee_label')}</label>
               <input type="number" value={newFee} onChange={e => setNewFee(e.target.value)} placeholder="500000" />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn ghost" onClick={() => setFeeModal(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setFeeModal(false)}>{t('cancel')}</button>
               <button className="btn primary" onClick={saveFee} disabled={saving || !newFee}>
-                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+                {saving ? t('saving') : t('save')}
               </button>
             </div>
           </div>
@@ -608,21 +611,21 @@ export function ContractView({ contractId, onBack, onToast }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setDatesModal(false)}>
           <div className="card" style={{ width: 400, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Sanalarni o'zgartirish</h3>
+              <h3 style={{ margin: 0 }}>{t('contracts_change_dates_btn')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setDatesModal(false)}><I.X size={15} /></button>
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
-              <label>Boshlanish sanasi *</label>
+              <label>{t('contracts_start_date')} *</label>
               <input type="date" value={datesForm.start_date} onChange={e => setDatesForm(f => ({ ...f, start_date: e.target.value }))} />
             </div>
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Tugash sanasi *</label>
+              <label>{t('contracts_end_date')} *</label>
               <input type="date" value={datesForm.end_date} onChange={e => setDatesForm(f => ({ ...f, end_date: e.target.value }))} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn ghost" onClick={() => setDatesModal(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setDatesModal(false)}>{t('cancel')}</button>
               <button className="btn primary" onClick={saveDates} disabled={saving || !datesForm.start_date || !datesForm.end_date}>
-                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+                {saving ? t('saving') : t('save')}
               </button>
             </div>
           </div>
@@ -634,14 +637,14 @@ export function ContractView({ contractId, onBack, onToast }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setEditModal(false)}>
           <div className="card" style={{ width: 460, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Shartnomani tahrirlash</h3>
+              <h3 style={{ margin: 0 }}>{t('contracts_edit_modal_title')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setEditModal(false)}><I.X size={15} /></button>
             </div>
             {[
-              ['Oylik to\'lov (so\'m)', 'monthly_fee', 'number', '500000'],
-              ['Mijoz ismi', 'customer_full_name', 'text', 'To\'liq ism'],
-              ['Pasport raqami', 'customer_passport_number', 'text', 'AA1234567'],
-              ['Manzil', 'customer_address', 'text', 'Shahar, ko\'cha'],
+              [t('contracts_new_fee_label'), 'monthly_fee', 'number', '500000'],
+              [t('contracts_client_name_label'), 'customer_full_name', 'text', ''],
+              [t('contracts_passport_no_label'), 'customer_passport_number', 'text', 'AA1234567'],
+              [t('profile_address'), 'customer_address', 'text', ''],
             ].map(([label, key, type, ph]) => (
               <div className="field" key={key} style={{ marginBottom: 10 }}>
                 <label>{label}</label>
@@ -649,9 +652,9 @@ export function ContractView({ contractId, onBack, onToast }) {
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-              <button className="btn ghost" onClick={() => setEditModal(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setEditModal(false)}>{t('cancel')}</button>
               <button className="btn primary" onClick={saveEdit} disabled={saving}>
-                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+                {saving ? t('saving') : t('save')}
               </button>
             </div>
           </div>
@@ -663,21 +666,21 @@ export function ContractView({ contractId, onBack, onToast }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setStatusModal(false)}>
           <div className="card" style={{ width: 360, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Statusni o'zgartirish</h3>
+              <h3 style={{ margin: 0 }}>{t('contracts_change_status_title')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setStatusModal(false)}><I.X size={15} /></button>
             </div>
             <div className="field" style={{ marginBottom: 14 }}>
-              <label>Yangi status</label>
+              <label>{t('contracts_new_status_label')}</label>
               <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={{ height: 38, width: '100%', padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-                <option value="ACTIVE">Faol (ACTIVE)</option>
-                <option value="EXPIRED">Tugagan (EXPIRED)</option>
-                <option value="ARCHIVED">Arxivlangan (ARCHIVED)</option>
+                <option value="ACTIVE">{t('status_active')} (ACTIVE)</option>
+                <option value="EXPIRED">{t('status_cancelled')} (EXPIRED)</option>
+                <option value="ARCHIVED">{t('status_archived')} (ARCHIVED)</option>
               </select>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="btn ghost" onClick={() => setStatusModal(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setStatusModal(false)}>{t('cancel')}</button>
               <button className="btn primary" onClick={saveStatus} disabled={saving || !newStatus}>
-                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+                {saving ? t('saving') : t('save')}
               </button>
             </div>
           </div>
@@ -691,6 +694,7 @@ export function ContractView({ contractId, onBack, onToast }) {
 
 export function GateLogsScreen() {
   const I = Icon;
+  const { t } = useT();
   const todayIso = new Date().toISOString().slice(0, 10);
   const [logs, setLogs] = React.useState([]);
   const [meta, setMeta] = React.useState({ total: 0, total_pages: 1, page: 1 });
@@ -714,7 +718,7 @@ export function GateLogsScreen() {
         setMeta(res?.meta || { total: 0, total_pages: 1, page: 1 });
       })
       .catch(() => {
-        setError('Darvoza loglari yuklashda xatolik yuz berdi');
+        setError(t('gate_load_err'));
         setLogs([]);
       })
       .finally(() => setLoading(false));
@@ -727,40 +731,40 @@ export function GateLogsScreen() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Darvoza loglari</h1>
-          <div className="page-sub">{meta.total} ta hodisa</div>
+          <h1 className="page-title">{t('gate_title')}</h1>
+          <div className="page-sub">{meta.total} {t('gate_events_suffix')}</div>
         </div>
         <div className="page-actions">
           <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }} />
           <span style={{ color: 'var(--muted)', fontSize: 13 }}>—</span>
           <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }} />
           <select value={allowedFilter} onChange={e => { setAllowedFilter(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            <option value="">Hammasi</option>
-            <option value="true">Ruxsat</option>
-            <option value="false">Rad etilgan</option>
+            <option value="">{t('gate_all_option')}</option>
+            <option value="true">{t('gate_allowed_chip')}</option>
+            <option value="false">{t('gate_denied_chip')}</option>
           </select>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 14 }}>
-        <Stat label="Ruxsat" value={allowedCount} tone="success" icon={I.LogIn} />
-        <Stat label="Rad etilgan" value={deniedCount} tone="danger" icon={I.ShieldOff} />
-        <Stat label="Jami (sahifa)" value={meta.total} icon={I.Users} />
+        <Stat label={t('gate_allowed_chip')} value={allowedCount} tone="success" icon={I.LogIn} />
+        <Stat label={t('gate_denied_chip')} value={deniedCount} tone="danger" icon={I.ShieldOff} />
+        <Stat label={t('gate_total_page_label')} value={meta.total} icon={I.Users} />
       </div>
 
       {error && <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--accent-soft)', borderRadius: 8, fontSize: 13, color: 'var(--brand-red)' }}>{error}</div>}
 
       {loading ? (
-        <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>
+        <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
           <table className="table">
             <thead>
-              <tr><th>O'quvchi ID</th><th>Holat</th><th>Sabab</th><th>Vaqt</th></tr>
+              <tr><th>{t('gate_student_col')}</th><th>{t('gate_status_col')}</th><th>{t('gate_reason_col')}</th><th>{t('gate_col_time')}</th></tr>
             </thead>
             <tbody>
               {logs.length === 0 && (
-                <tr><td colSpan={4} style={{ padding: 18, color: 'var(--muted)' }}>Log topilmadi</td></tr>
+                <tr><td colSpan={4} style={{ padding: 18, color: 'var(--muted)' }}>{t('gate_no_logs')}</td></tr>
               )}
               {logs.map((l, idx) => (
                 <tr key={l.id || idx}>
@@ -769,13 +773,13 @@ export function GateLogsScreen() {
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: l.allowed !== false ? 'var(--success-soft)' : 'var(--accent-soft)', color: l.allowed !== false ? 'var(--success)' : 'var(--brand-red)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                         {l.allowed !== false ? <I.LogIn size={14} /> : <I.ShieldOff size={14} />}
                       </div>
-                      <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>O'quvchi #{l.student_id || '—'}</span>
+                      <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{t('gate_col_student')} #{l.student_id || '—'}</span>
                     </div>
                   </td>
                   <td>
                     {l.allowed !== false
-                      ? <span className="chip success"><span className="chip-dot"></span>Ruxsat</span>
-                      : <span className="chip danger"><span className="chip-dot"></span>Rad etilgan</span>}
+                      ? <span className="chip success"><span className="chip-dot"></span>{t('gate_allowed_chip')}</span>
+                      : <span className="chip danger"><span className="chip-dot"></span>{t('gate_denied_chip')}</span>}
                   </td>
                   <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{l.reason || '—'}</td>
                   <td style={{ fontSize: 12, color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
@@ -787,9 +791,9 @@ export function GateLogsScreen() {
           </table>
           {meta.total_pages > 1 && (
             <div style={{ display: 'flex', gap: 6, padding: '12px 16px', borderTop: '1px solid var(--border)', alignItems: 'center' }}>
-              <button className="btn sm ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>‹ Oldingi</button>
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{page} / {meta.total_pages} · Jami: {meta.total}</span>
-              <button className="btn sm ghost" disabled={page >= meta.total_pages} onClick={() => setPage(p => p + 1)}>Keyingi ›</button>
+              <button className="btn sm ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>‹ {t('prev')}</button>
+              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{page} / {meta.total_pages} · {t('all')}: {meta.total}</span>
+              <button className="btn sm ghost" disabled={page >= meta.total_pages} onClick={() => setPage(p => p + 1)}>{t('next')} ›</button>
             </div>
           )}
         </div>
@@ -885,6 +889,7 @@ function PermSelector({ ids, onChange, permissions }) {
 
 export function UsersScreen({ initialView = 'users', onToast } = {}) {
   const I = Icon;
+  const { t } = useT();
   const [users, setUsers] = React.useState([]);
   const [roles, setRoles] = React.useState([]);
   const [permissions, setPermissions] = React.useState([]);
@@ -940,14 +945,14 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
 
   // Role CRUD
   async function createRole() {
-    if (!newRole.name.trim()) { onToast?.('Rol nomi kiritilmagan'); return; }
+    if (!newRole.name.trim()) { onToast?.(t('toast_role_name_required')); return; }
     try {
       await apiCreateRole({ name: newRole.name, description: newRole.description, permission_ids: newRole.permission_ids });
       setNewRole({ name: '', description: '', permission_ids: [] });
-      onToast?.('Rol yaratildi');
+      onToast?.(t('toast_role_created'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     }
   }
 
@@ -963,36 +968,36 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
     try {
       await apiUpdateRole(editingRole.id, { name: editingRole.name, description: editingRole.description, permission_ids: editingRole.permission_ids });
       setEditingRole(null);
-      onToast?.('Rol yangilandi');
+      onToast?.(t('toast_role_updated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     }
   }
 
   async function removeRole(roleId) {
-    if (!confirm("Rostdan ham o'chirasizmi?")) return;
+    if (!confirm(t('delete') + '?')) return;
     try {
       await apiDeleteRole(roleId);
-      onToast?.("Rol o'chirildi");
+      onToast?.(t('toast_role_deleted'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     }
   }
 
   // User CRUD
   async function deleteUser(userId) {
-    if (!confirm("Foydalanuvchini o'chirasizmi?")) return;
+    if (!confirm(t('delete') + '?')) return;
     setDeletingUserId(userId);
     try {
       await apiDeleteUser(userId);
       setOpenMenuUserId(null);
       setSelectedIds(prev => prev.filter(id => id !== userId));
-      onToast?.("Foydalanuvchi o'chirildi");
+      onToast?.(t('toast_user_deleted'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally {
       setDeletingUserId(null);
     }
@@ -1000,15 +1005,15 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
 
   async function bulkDeleteUsers() {
     if (selectedIds.length === 0) return;
-    if (!confirm(`${selectedIds.length} ta foydalanuvchini o'chirasizmi?`)) return;
+    if (!confirm(selectedIds.length + ' ' + t('delete') + '?')) return;
     setBulkDeleting(true);
     try {
       await apiDeleteUsersBulk(selectedIds);
       setSelectedIds([]);
-      onToast?.(`${selectedIds.length} ta foydalanuvchi o'chirildi`);
+      onToast?.(t('toast_user_deleted'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally {
       setBulkDeleting(false);
     }
@@ -1028,7 +1033,7 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
   }
 
   async function saveEditUser() {
-    if (!editUserForm.full_name || !editUserForm.phone) { onToast?.("Majburiy maydonlar to'ldirilmagan"); return; }
+    if (!editUserForm.full_name || !editUserForm.phone) { onToast?.(t('toast_required_fields')); return; }
     setSavingEditUser(true);
     try {
       const payload = {
@@ -1041,17 +1046,17 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
       await apiUpdateUser(editingUser.id, payload);
       await apiUpdateUserRoles(editingUser.id, editUserForm.role_ids.map(Number));
       setEditingUser(null);
-      onToast?.('Foydalanuvchi yangilandi');
+      onToast?.(t('toast_user_updated'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally {
       setSavingEditUser(false);
     }
   }
 
   async function createUser() {
-    if (!userForm.full_name || !userForm.phone || !userForm.password) { onToast?.("Majburiy maydonlar to'ldirilmagan"); return; }
+    if (!userForm.full_name || !userForm.phone || !userForm.password) { onToast?.(t('toast_required_fields')); return; }
     setSavingUser(true);
     try {
       const res = await apiCreateUser({
@@ -1068,10 +1073,10 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
       }
       setShowCreateUser(false);
       setUserForm({ full_name: '', phone: '', email: '', password: '', status: 'active', is_super_admin: false, role_ids: [] });
-      onToast?.('Foydalanuvchi yaratildi');
+      onToast?.(t('toast_user_created'));
       load();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally {
       setSavingUser(false);
     }
@@ -1092,31 +1097,31 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
     }
   }
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
 
   return (
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Foydalanuvchilar va rollar</h1>
-          <div className="page-sub">{users.length} foydalanuvchi · {roles.length} rol</div>
+          <h1 className="page-title">{t('users_heading')}</h1>
+          <div className="page-sub">{users.length} {t('users_tab_users').toLowerCase()} · {roles.length} {t('users_tab_roles').toLowerCase()}</div>
         </div>
         {tab === 'users' && (
           <div className="page-actions">
             {selectedIds.length > 0 && (
               <button className="btn danger" onClick={bulkDeleteUsers} disabled={bulkDeleting}>
-                <I.Trash2 size={14} /> {bulkDeleting ? "O'chirilmoqda..." : `${selectedIds.length} ta o'chirish`}
+                <I.Trash2 size={14} /> {bulkDeleting ? t('deleting') : `${selectedIds.length} ${t('delete')}`}
               </button>
             )}
-            <button className="btn primary" onClick={() => setShowCreateUser(true)}><I.UserPlus size={15} /> Yangi foydalanuvchi</button>
+            <button className="btn primary" onClick={() => setShowCreateUser(true)}><I.UserPlus size={15} /> {t('users_new')}</button>
           </div>
         )}
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="tabs">
-          <div className={'tab' + (tab === 'users' ? ' active' : '')} onClick={() => setTab('users')}>Foydalanuvchilar</div>
-          <div className={'tab' + (tab === 'roles' ? ' active' : '')} onClick={() => setTab('roles')}>Rollar</div>
+          <div className={'tab' + (tab === 'users' ? ' active' : '')} onClick={() => setTab('users')}>{t('users_tab_users')}</div>
+          <div className={'tab' + (tab === 'roles' ? ' active' : '')} onClick={() => setTab('roles')}>{t('users_tab_roles')}</div>
         </div>
       </div>
 
@@ -1126,17 +1131,17 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
             <thead>
               <tr>
                 <th style={{ width: 36 }}>
-                  <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} title="Hammasini tanlash" />
+                  <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} title={t('all')} />
                 </th>
-                <th>F.I.O.</th>
-                <th>Telefon / Email</th>
-                <th>Rol</th>
-                <th>Status</th>
+                <th>{t('users_fio_label')}</th>
+                <th>{t('users_phone_email_label')}</th>
+                <th>{t('users_col_role')}</th>
+                <th>{t('users_col_status')}</th>
                 <th style={{ width: 40 }}></th>
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 && <tr><td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>Foydalanuvchi topilmadi</td></tr>}
+              {users.length === 0 && <tr><td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>{t('users_not_found')}</td></tr>}
               {users.map((u) => {
                 const isSelected = selectedIds.includes(u.id);
                 return (
@@ -1159,7 +1164,7 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
                           : <span className="chip">—</span>
                       }
                     </td>
-                    <td>{u.status === 'active' ? <span className="chip success">Faol</span> : <span className="chip">Nofaol</span>}</td>
+                    <td>{u.status === 'active' ? <span className="chip success">{t('users_active_chip')}</span> : <span className="chip">{t('users_inactive_chip')}</span>}</td>
                     <td style={{ position: 'relative', overflow: 'visible' }}>
                       <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={(e) => {
                         e.stopPropagation();
@@ -1174,11 +1179,11 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
                       {openMenuUserId === u.id && (
                         <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 160, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
                           <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => openEditUser(u)}>
-                            <I.Edit size={14} /> Tahrirlash
+                            <I.Edit size={14} /> {t('edit')}
                           </button>
                           {!u.is_super_admin && (
                             <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => deleteUser(u.id)} disabled={deletingUserId === u.id}>
-                              <I.Trash2 size={14} /> {deletingUserId === u.id ? "O'chirilmoqda..." : "O'chirish"}
+                              <I.Trash2 size={14} /> {deletingUserId === u.id ? t('deleting') : t('delete')}
                             </button>
                           )}
                         </div>
@@ -1196,9 +1201,9 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 14 }}>
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Rol nomi</th><th>Ruxsatlar</th><th style={{ width: 72 }}></th></tr></thead>
+              <thead><tr><th>{t('users_role_name_col')}</th><th>{t('users_perms_col')}</th><th style={{ width: 72 }}></th></tr></thead>
               <tbody>
-                {roles.length === 0 && <tr><td colSpan={3} style={{ padding: 18, color: 'var(--muted)' }}>Rol topilmadi</td></tr>}
+                {roles.length === 0 && <tr><td colSpan={3} style={{ padding: 18, color: 'var(--muted)' }}>{t('users_role_no_found')}</td></tr>}
                 {roles.map((r) => (
                   <tr key={r.id}>
                     <td>
@@ -1231,22 +1236,22 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
           </div>
 
           <div className="card" style={{ padding: 16 }}>
-            <div className="card-title" style={{ marginBottom: 10 }}>Yangi rol</div>
+            <div className="card-title" style={{ marginBottom: 10 }}>{t('users_new_role_card')}</div>
             <div className="field" style={{ marginBottom: 10 }}>
-              <label>Rol nomi *</label>
-              <input value={newRole.name} onChange={(e) => setNewRole((p) => ({ ...p, name: e.target.value }))} placeholder="Masalan: Menejer" />
+              <label>{t('users_role_name_req')}</label>
+              <input value={newRole.name} onChange={(e) => setNewRole((p) => ({ ...p, name: e.target.value }))} placeholder="" />
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
-              <label>Tavsif</label>
-              <input value={newRole.description} onChange={(e) => setNewRole((p) => ({ ...p, description: e.target.value }))} placeholder="Qisqacha tavsif" />
+              <label>{t('users_role_desc')}</label>
+              <input value={newRole.description} onChange={(e) => setNewRole((p) => ({ ...p, description: e.target.value }))} placeholder="" />
             </div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Ruxsatlar</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{t('users_perms_label')}</div>
             <PermSelector
               ids={newRole.permission_ids}
               onChange={ids => setNewRole(p => ({ ...p, permission_ids: ids }))}
               permissions={permissions}
             />
-            <button className="btn primary" style={{ marginTop: 12 }} onClick={createRole}><I.Check size={14} /> Saqlash</button>
+            <button className="btn primary" style={{ marginTop: 12 }} onClick={createRole}><I.Check size={14} /> {t('save')}</button>
           </div>
         </div>
       )}
@@ -1256,16 +1261,16 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setShowCreateUser(false)}>
           <div className="card" style={{ width: 520, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Yangi foydalanuvchi</h3>
+              <h3 style={{ margin: 0 }}>{t('users_create_user_modal')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setShowCreateUser(false)}><I.X size={15} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="field" style={{ gridColumn: 'span 2' }}>
-                <label>F.I.O. *</label>
-                <input value={userForm.full_name} onChange={e => setUserForm(p => ({ ...p, full_name: e.target.value }))} placeholder="Ism Familiya" />
+                <label>{t('users_fio_label')} *</label>
+                <input value={userForm.full_name} onChange={e => setUserForm(p => ({ ...p, full_name: e.target.value }))} placeholder="" />
               </div>
               <div className="field">
-                <label>Telefon *</label>
+                <label>{t('profile_phone')} *</label>
                 <input value={userForm.phone} onChange={e => setUserForm(p => ({ ...p, phone: e.target.value }))} placeholder="+998901234567" />
               </div>
               <div className="field">
@@ -1273,25 +1278,25 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
                 <input value={userForm.email} onChange={e => setUserForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
               </div>
               <div className="field">
-                <label>Parol *</label>
+                <label>{t('users_pwd_label')}</label>
                 <input type="password" value={userForm.password} onChange={e => setUserForm(p => ({ ...p, password: e.target.value }))} placeholder="••••••••" />
               </div>
               <div className="field">
-                <label>Status</label>
+                <label>{t('users_col_status')}</label>
                 <select value={userForm.status} onChange={e => setUserForm(p => ({ ...p, status: e.target.value }))}>
-                  <option value="active">Faol</option>
-                  <option value="inactive">Nofaol</option>
+                  <option value="active">{t('users_active_chip')}</option>
+                  <option value="inactive">{t('users_inactive_chip')}</option>
                 </select>
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
-                <label>Rol</label>
+                <label>{t('users_role_select_label')}</label>
                 <select multiple value={userForm.role_ids} onChange={e => {
                   const vals = Array.from(e.target.selectedOptions).map(o => Number(o.value));
                   setUserForm(p => ({ ...p, role_ids: vals }));
                 }} style={{ height: 100 }}>
                   {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Ctrl+click bilan bir nechta tanlash mumkin</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{t('users_ctrl_hint')}</div>
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1301,9 +1306,9 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button className="btn ghost" onClick={() => setShowCreateUser(false)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setShowCreateUser(false)}>{t('cancel')}</button>
               <button className="btn primary" onClick={createUser} disabled={savingUser}>
-                {savingUser ? 'Saqlanmoqda...' : 'Yaratish'}
+                {savingUser ? t('saving') : t('users_create_action')}
               </button>
             </div>
           </div>
@@ -1315,16 +1320,16 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setEditingUser(null)}>
           <div className="card" style={{ width: 520, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Foydalanuvchini tahrirlash</h3>
+              <h3 style={{ margin: 0 }}>{t('users_edit_user_modal')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setEditingUser(null)}><I.X size={15} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="field" style={{ gridColumn: 'span 2' }}>
-                <label>F.I.O. *</label>
-                <input value={editUserForm.full_name} onChange={e => setEditUserForm(p => ({ ...p, full_name: e.target.value }))} placeholder="Ism Familiya" />
+                <label>{t('users_fio_label')} *</label>
+                <input value={editUserForm.full_name} onChange={e => setEditUserForm(p => ({ ...p, full_name: e.target.value }))} placeholder="" />
               </div>
               <div className="field">
-                <label>Telefon *</label>
+                <label>{t('profile_phone')} *</label>
                 <input value={editUserForm.phone} onChange={e => setEditUserForm(p => ({ ...p, phone: e.target.value }))} placeholder="+998901234567" />
               </div>
               <div className="field">
@@ -1332,33 +1337,33 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
                 <input value={editUserForm.email} onChange={e => setEditUserForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
               </div>
               <div className="field">
-                <label>Yangi parol</label>
-                <input type="password" value={editUserForm.password} onChange={e => setEditUserForm(p => ({ ...p, password: e.target.value }))} placeholder="O'zgartirmasangiz bo'sh qoldiring" />
+                <label>{t('users_new_pwd_label')}</label>
+                <input type="password" value={editUserForm.password} onChange={e => setEditUserForm(p => ({ ...p, password: e.target.value }))} placeholder="" />
               </div>
               <div className="field">
-                <label>Status</label>
+                <label>{t('users_col_status')}</label>
                 <select value={editUserForm.status} onChange={e => setEditUserForm(p => ({ ...p, status: e.target.value }))}>
-                  <option value="active">Faol</option>
-                  <option value="inactive">Nofaol</option>
+                  <option value="active">{t('users_active_chip')}</option>
+                  <option value="inactive">{t('users_inactive_chip')}</option>
                 </select>
               </div>
               {!editingUser.is_super_admin && (
                 <div className="field" style={{ gridColumn: 'span 2' }}>
-                  <label>Rollar</label>
+                  <label>{t('users_tab_roles')}</label>
                   <select multiple value={editUserForm.role_ids} onChange={e => {
                     const vals = Array.from(e.target.selectedOptions).map(o => Number(o.value));
                     setEditUserForm(p => ({ ...p, role_ids: vals }));
                   }} style={{ height: 100 }}>
                     {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Ctrl+click bilan bir nechta tanlash mumkin</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{t('users_ctrl_hint')}</div>
                 </div>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button className="btn ghost" onClick={() => setEditingUser(null)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setEditingUser(null)}>{t('cancel')}</button>
               <button className="btn primary" onClick={saveEditUser} disabled={savingEditUser}>
-                {savingEditUser ? 'Saqlanmoqda...' : 'Saqlash'}
+                {savingEditUser ? t('saving') : t('save')}
               </button>
             </div>
           </div>
@@ -1370,26 +1375,26 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setEditingRole(null)}>
           <div className="card" style={{ width: 500, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Rolni tahrirlash</h3>
+              <h3 style={{ margin: 0 }}>{t('users_edit_role_modal')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setEditingRole(null)}><I.X size={15} /></button>
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
-              <label>Rol nomi *</label>
+              <label>{t('users_role_name_req')}</label>
               <input value={editingRole.name} onChange={e => setEditingRole(p => ({ ...p, name: e.target.value }))} />
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
-              <label>Tavsif</label>
+              <label>{t('users_role_desc')}</label>
               <input value={editingRole.description || ''} onChange={e => setEditingRole(p => ({ ...p, description: e.target.value }))} />
             </div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Ruxsatlar</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{t('users_perms_label')}</div>
             <PermSelector
               ids={editingRole.permission_ids}
               onChange={ids => setEditingRole(p => ({ ...p, permission_ids: ids }))}
               permissions={permissions}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button className="btn ghost" onClick={() => setEditingRole(null)}>Bekor</button>
-              <button className="btn primary" onClick={saveEditRole}><I.Check size={14} /> Saqlash</button>
+              <button className="btn ghost" onClick={() => setEditingRole(null)}>{t('cancel')}</button>
+              <button className="btn primary" onClick={saveEditRole}><I.Check size={14} /> {t('save')}</button>
             </div>
           </div>
         </div>
@@ -1402,6 +1407,7 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
 
 export function SettingsScreen({ theme, setTheme } = {}) {
   const I = Icon;
+  const { t } = useT();
   const [settings, setSettings] = React.useState({});
   const [rawSettings, setRawSettings] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -1425,10 +1431,10 @@ export function SettingsScreen({ theme, setTheme } = {}) {
   const [importResult, setImportResult] = React.useState(null);
 
   const tabDefs = [
-    { id: 'general', label: 'Umumiy', icon: I.Settings },
-    { id: 'billing', label: "To'lov", icon: I.CreditCard },
-    { id: 'security', label: 'Xavfsizlik', icon: I.Shield },
-    { id: 'integrations', label: 'Integratsiya', icon: I.Link },
+    { id: 'general', label: t('settings_tab_general'), icon: I.Settings },
+    { id: 'billing', label: t('settings_tab_billing'), icon: I.CreditCard },
+    { id: 'security', label: t('settings_tab_security'), icon: I.Shield },
+    { id: 'integrations', label: t('settings_tab_integrations'), icon: I.Link },
     { id: 'import', label: 'Import', icon: I.Upload },
     { id: 'backup', label: 'Backup', icon: I.Save },
     { id: 'admin', label: 'Admin', icon: I.AlertTriangle },
@@ -1468,9 +1474,9 @@ export function SettingsScreen({ theme, setTheme } = {}) {
     setSaving(true);
     try {
       await apiUpdateSettings(settings);
-      alert('Sozlamalar saqlandi');
+      alert(t('toast_settings_saved'));
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      alert(e.message);
     } finally {
       setSaving(false);
     }
@@ -1481,11 +1487,11 @@ export function SettingsScreen({ theme, setTheme } = {}) {
     setBackupMsg('');
     try {
       const res = await apiTriggerManualBackup();
-      setBackupMsg(res?.data?.message || "Backup muvaffaqiyatli boshlandi. Telegram kanaliga yuborilmoqda...");
+      setBackupMsg(res?.data?.message || t('backup_started'));
       const bRes = await apiGetBackupStatus();
       setBackupStatus(bRes?.data || null);
     } catch (e) {
-      setBackupMsg('Xatolik: ' + e.message);
+      setBackupMsg(e.message);
     } finally {
       setBackupRunning(false);
     }
@@ -1509,9 +1515,9 @@ export function SettingsScreen({ theme, setTheme } = {}) {
       else await apiUnarchiveYear(year);
       const aRes = await apiGetArchiveStats(year);
       setArchiveStats(aRes?.data || null);
-      alert(action === 'archive' ? 'Arxivlandi' : 'Arxivdan olindi');
+      alert(action === 'archive' ? t('toast_archived') : t('toast_unarchived'));
     } catch (e) {
-      alert('Admin amali xatoligi: ' + e.message);
+      alert(e.message);
     }
   }
 
@@ -1531,7 +1537,7 @@ export function SettingsScreen({ theme, setTheme } = {}) {
     }
   }
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
 
   const isSavingTab = ['general', 'billing', 'security', 'integrations'].includes(activeTab);
 
@@ -1539,13 +1545,13 @@ export function SettingsScreen({ theme, setTheme } = {}) {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Sozlamalar</h1>
-          <div className="page-sub">Tizim parametrlarini boshqarish</div>
+          <h1 className="page-title">{t('nav_settings')}</h1>
+          <div className="page-sub">{t('settings_sub')}</div>
         </div>
         <div className="page-actions">
           {isSavingTab && (
             <button className="btn primary" onClick={save} disabled={saving}>
-              <I.Save size={15} /> {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+              <I.Save size={15} /> {saving ? t('saving') : t('save')}
             </button>
           )}
         </div>
@@ -1570,9 +1576,9 @@ export function SettingsScreen({ theme, setTheme } = {}) {
             <div>
               {rawSettings.length > 0 && (
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Barcha tizim sozlamalari</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>{t('settings_all_settings')}</div>
                   <table className="table">
-                    <thead><tr><th>Kalit</th><th>Qiymat</th><th>Tavsif</th></tr></thead>
+                    <thead><tr><th>{t('settings_col_key')}</th><th>{t('settings_col_value')}</th><th>{t('settings_col_desc')}</th></tr></thead>
                     <tbody>
                       {rawSettings.map((s) => (
                         <tr key={s.id || s.key}>
@@ -1596,19 +1602,19 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
           {activeTab === 'billing' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="field"><label>Valyuta</label><input value={settings.currency || "so'm"} onChange={(e) => setVal('currency', e.target.value)} /></div>
-              <div className="field"><label>Default oylik to'lov</label><input type="number" value={settings.monthly_fee_default || settings.default_monthly_fee || ''} onChange={(e) => setVal('monthly_fee_default', Number(e.target.value))} /></div>
-              <div className="field"><label>Kechikish jarimasi %</label><input type="number" value={settings.late_fee_percent || ''} onChange={(e) => setVal('late_fee_percent', Number(e.target.value))} /></div>
-              <div className="field"><label>Hisobot kuni</label><input type="number" value={settings.report_day || ''} onChange={(e) => setVal('report_day', Number(e.target.value))} /></div>
+              <div className="field"><label>{t('settings_currency')}</label><input value={settings.currency || "so'm"} onChange={(e) => setVal('currency', e.target.value)} /></div>
+              <div className="field"><label>{t('settings_default_monthly')}</label><input type="number" value={settings.monthly_fee_default || settings.default_monthly_fee || ''} onChange={(e) => setVal('monthly_fee_default', Number(e.target.value))} /></div>
+              <div className="field"><label>{t('settings_late_fee')}</label><input type="number" value={settings.late_fee_percent || ''} onChange={(e) => setVal('late_fee_percent', Number(e.target.value))} /></div>
+              <div className="field"><label>{t('settings_report_day')}</label><input type="number" value={settings.report_day || ''} onChange={(e) => setVal('report_day', Number(e.target.value))} /></div>
             </div>
           )}
 
           {activeTab === 'security' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
               {[
-                ['allow_multiple_sessions', 'Bir foydalanuvchi uchun bir nechta sessiya ruxsat etilsin'],
-                ['require_2fa_admin', 'Adminlar uchun 2FA majburiy'],
-                ['ip_whitelist_enabled', 'IP whitelist yoqilsin'],
+                ['allow_multiple_sessions', t('settings_allow_sessions')],
+                ['require_2fa_admin', t('settings_require_2fa')],
+                ['ip_whitelist_enabled', t('settings_ip_whitelist')],
               ].map(([k, l]) => (
                 <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5 }}>
                   <input type="checkbox" checked={!!settings[k]} onChange={(e) => setVal(k, e.target.checked)} /> {l}
@@ -1627,24 +1633,24 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
           {activeTab === 'import' && (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>O'quvchilarni Excel orqali import qilish</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{t('settings_import_title')}</div>
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-                Faylda quyidagi ustunlar bo'lishi kerak:
+                {t('settings_import_desc')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
                 {[
-                  ['first_name', 'Ism', true],
-                  ['last_name', 'Familiya', true],
-                  ['date_of_birth', 'Tug\'ilgan sana (YYYY-MM-DD)', true],
-                  ['height', 'Bo\'y (sm)', true],
-                  ['weight', 'Vazn (kg)', true],
-                  ['pnfl', 'JSHSHIR (14 raqam)', true],
-                  ['phone', 'Telefon', false],
-                  ['address', 'Manzil', false],
-                  ['ampula', 'Pozitsiya', false],
-                  ['millati', 'Millati', false],
-                  ['status', 'Status (ACTIVE/INACTIVE/GRADUATED/EXPELLED)', false],
-                  ['group_name', 'Guruh nomi', false],
+                  ['first_name', t('import_col_first_name'), true],
+                  ['last_name', t('import_col_last_name'), true],
+                  ['date_of_birth', t('import_col_birth_date'), true],
+                  ['height', t('import_col_height'), true],
+                  ['weight', t('import_col_weight'), true],
+                  ['pnfl', t('import_col_pnfl'), true],
+                  ['phone', t('import_col_phone'), false],
+                  ['address', t('import_col_address'), false],
+                  ['ampula', t('import_col_position'), false],
+                  ['millati', t('import_col_nationality'), false],
+                  ['status', t('import_col_status'), false],
+                  ['group_name', t('import_col_group'), false],
                 ].map(([key, label, required]) => (
                   <div key={key} style={{ padding: '8px 12px', background: required ? 'var(--success-soft)' : 'var(--surface-2)', borderRadius: 8, border: '1px solid ' + (required ? 'transparent' : 'var(--border)') }}>
                     <div style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: required ? 'var(--success)' : 'var(--text)' }}>{key}</div>
@@ -1654,31 +1660,31 @@ export function SettingsScreen({ theme, setTheme } = {}) {
               </div>
 
               <div className="field" style={{ marginBottom: 12 }}>
-                <label>Excel fayl (.xlsx)</label>
+                <label>{t('settings_import_file_label')}</label>
                 <input type="file" accept=".xlsx,.xls,.csv" onChange={e => { setImportFile(e.target.files?.[0] || null); setImportResult(null); }} />
               </div>
               {importFile && (
                 <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-                  Tanlangan: <strong style={{ color: 'var(--text)' }}>{importFile.name}</strong> ({(importFile.size / 1024).toFixed(1)} KB)
+                  {t('settings_import_selected')}: <strong style={{ color: 'var(--text)' }}>{importFile.name}</strong> ({(importFile.size / 1024).toFixed(1)} KB)
                 </div>
               )}
               <button className="btn primary" onClick={handleImport} disabled={!importFile || importing}>
-                <I.Upload size={14} /> {importing ? 'Yuklanmoqda...' : 'Import qilish'}
+                <I.Upload size={14} /> {importing ? t('loading') : t('settings_import_btn')}
               </button>
 
               {importResult && (
                 <div style={{ marginTop: 16, padding: 14, borderRadius: 10, background: importResult.ok ? 'var(--success-soft)' : 'var(--accent-soft)', border: '1px solid ' + (importResult.ok ? 'var(--success)' : 'var(--brand-red)') }}>
                   {importResult.ok ? (
                     <div>
-                      <div style={{ fontWeight: 700, color: 'var(--success)', marginBottom: 6 }}>Import muvaffaqiyatli!</div>
+                      <div style={{ fontWeight: 700, color: 'var(--success)', marginBottom: 6 }}>{t('settings_import_ok')}</div>
                       {importResult.data && typeof importResult.data === 'object' && (
                         <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
-                          {importResult.data.created_count != null && <div>Yaratildi: <strong>{importResult.data.created_count}</strong></div>}
-                          {importResult.data.updated_count != null && <div>Yangilandi: <strong>{importResult.data.updated_count}</strong></div>}
-                          {importResult.data.skipped_count != null && <div>O'tkazib yuborildi: <strong>{importResult.data.skipped_count}</strong></div>}
+                          {importResult.data.created_count != null && <div>{t('settings_import_created')}: <strong>{importResult.data.created_count}</strong></div>}
+                          {importResult.data.updated_count != null && <div>{t('settings_import_updated')}: <strong>{importResult.data.updated_count}</strong></div>}
+                          {importResult.data.skipped_count != null && <div>{t('settings_import_skipped')}: <strong>{importResult.data.skipped_count}</strong></div>}
                           {importResult.data.errors?.length > 0 && (
                             <div style={{ marginTop: 8 }}>
-                              <div style={{ fontWeight: 600, color: 'var(--warning)' }}>Xatolar:</div>
+                              <div style={{ fontWeight: 600, color: 'var(--warning)' }}>{t('settings_import_errors')}:</div>
                               {importResult.data.errors.map((e, i) => <div key={i} style={{ fontSize: 12 }}>{e}</div>)}
                             </div>
                           )}
@@ -1686,7 +1692,7 @@ export function SettingsScreen({ theme, setTheme } = {}) {
                       )}
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--brand-red)', fontWeight: 600 }}>Xatolik: {importResult.message}</div>
+                    <div style={{ color: 'var(--brand-red)', fontWeight: 600 }}>{importResult.message}</div>
                   )}
                 </div>
               )}
@@ -1695,15 +1701,15 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
           {activeTab === 'backup' && (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Ma'lumotlar bazasi Backup</div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Qo'lda backup yarating yoki joriy holatni tekshiring</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{t('settings_backup_title')}</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>{t('settings_backup_desc')}</div>
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                 <button className="btn primary" onClick={runBackup} disabled={backupRunning}>
-                  <I.Save size={14} /> {backupRunning ? 'Yaratilmoqda...' : 'Backup yaratish'}
+                  <I.Save size={14} /> {backupRunning ? t('settings_backup_running') : t('settings_backup_btn')}
                 </button>
                 <button className="btn ghost" onClick={refreshBackupStatus} disabled={backupLoading}>
-                  <I.ArrowRight size={14} /> Statusni yangilash
+                  <I.ArrowRight size={14} /> {t('settings_backup_refresh')}
                 </button>
               </div>
 
@@ -1713,24 +1719,24 @@ export function SettingsScreen({ theme, setTheme } = {}) {
                 </div>
               )}
 
-              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Backup holati</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>{t('settings_backup_status_title')}</div>
 
               {backupLoading ? (
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Yuklanmoqda...</div>
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t('loading')}</div>
               ) : backupStatus ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {Object.entries(backupStatus).map(([k, v]) => (
                     <div key={k} style={{ padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{k.replace(/_/g, ' ')}</div>
                       <div style={{ marginTop: 4, fontSize: 13.5, fontWeight: 600, wordBreak: 'break-all' }}>
-                        {typeof v === 'boolean' ? (v ? 'Ha' : "Yo'q") : String(v ?? '—')}
+                        {typeof v === 'boolean' ? (v ? t('yes') : t('no')) : String(v ?? '—')}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div style={{ padding: 20, background: 'var(--surface-2)', borderRadius: 10, fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
-                  Backup holati ma'lumotlari topilmadi
+                  {t('settings_backup_not_found')}
                 </div>
               )}
             </div>
@@ -1738,19 +1744,19 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
           {activeTab === 'admin' && (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Arxiv boshqaruvi</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>{t('settings_admin_title')}</div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 16 }}>
                 <div className="field" style={{ margin: 0 }}>
-                  <label>Yil</label>
+                  <label>{t('year_label')}</label>
                   <input type="number" value={adminYear} onChange={(e) => setAdminYear(e.target.value)} style={{ width: 120 }} />
                 </div>
-                <button className="btn" onClick={() => archiveYear('archive')} disabled={adminLoading}>Arxivlash</button>
-                <button className="btn ghost" onClick={() => archiveYear('unarchive')} disabled={adminLoading}>Arxivdan olish</button>
+                <button className="btn" onClick={() => archiveYear('archive')} disabled={adminLoading}>{t('settings_archive_btn')}</button>
+                <button className="btn ghost" onClick={() => archiveYear('unarchive')} disabled={adminLoading}>{t('settings_unarchive_btn')}</button>
               </div>
 
-              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>Arxiv statistikasi</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>{t('settings_archive_stats')}</div>
               {adminLoading ? (
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Yuklanmoqda...</div>
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t('loading')}</div>
               ) : archiveStats ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {Object.entries(archiveStats).map(([k, v]) => (
@@ -1762,7 +1768,7 @@ export function SettingsScreen({ theme, setTheme } = {}) {
                 </div>
               ) : (
                 <div style={{ padding: 20, background: 'var(--surface-2)', borderRadius: 10, fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
-                  Ma'lumot yo'q
+                  {t('settings_no_data')}
                 </div>
               )}
             </div>
@@ -1786,6 +1792,7 @@ function todayDateTimeLocal() {
 
 export function TransactionsScreen({ onToast } = {}) {
   const I = Icon;
+  const { t } = useT();
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState('');
@@ -1879,7 +1886,7 @@ export function TransactionsScreen({ onToast } = {}) {
       } catch (e) {
         if (!active) return;
         setManualContractMatches([]);
-        setManualContractError(e.message || 'Shartnoma topilmadi');
+        setManualContractError(e.message || t('contracts_not_found'));
       } finally {
         if (active) setManualContractLoading(false);
       }
@@ -1922,29 +1929,29 @@ export function TransactionsScreen({ onToast } = {}) {
   }
 
   async function handleCancel(id) {
-    if (!confirm("To'lovni bekor qilasizmi?")) return;
+    if (!confirm(t('tx_cancel_action') + '?')) return;
     try {
       await apiCancelTransaction(id);
-      setDetail(null); onToast?.("To'lov bekor qilindi"); loadData();
-    } catch (e) { alert('Xatolik: ' + e.message); }
+      setDetail(null); onToast?.(t('toast_tx_cancelled')); loadData();
+    } catch (e) { alert(e.message); }
   }
 
   async function handleDelete(id) {
-    if (!confirm("Tranzaksiyani o'chirasizmi? Bu amalni ortga qaytarib bo'lmaydi.")) return;
+    if (!confirm(t('delete') + '?')) return;
     try {
       await apiDeleteTransaction(id);
-      setDetail(null); onToast?.("Tranzaksiya o'chirildi"); loadData();
-    } catch (e) { alert('Xatolik: ' + e.message); }
+      setDetail(null); onToast?.(t('toast_tx_deleted')); loadData();
+    } catch (e) { alert(e.message); }
   }
 
   async function handleBulkDelete() {
     if (!selectedIds.length) return;
-    if (!confirm(`${selectedIds.length} ta tranzaksiyani o'chirasizmi?`)) return;
+    if (!confirm(selectedIds.length + ' ' + t('delete') + '?')) return;
     setDeleting(true);
     try {
       await apiDeleteTransactionsBulk(selectedIds);
-      setSelectedIds([]); onToast?.(`${selectedIds.length} ta tranzaksiya o'chirildi`); loadData();
-    } catch (e) { alert('Xatolik: ' + e.message); }
+      setSelectedIds([]); onToast?.(t('toast_tx_deleted')); loadData();
+    } catch (e) { alert(e.message); }
     finally { setDeleting(false); }
   }
 
@@ -1956,14 +1963,14 @@ export function TransactionsScreen({ onToast } = {}) {
         student_id: Number(assignForm.student_id), contract_id: Number(assignForm.contract_id),
       });
       setAssignTxId(null); setAssignForm({ student_id: '', contract_id: '' });
-      onToast?.("Tranzaksiya biriktirildi"); loadData();
-    } catch (e) { alert('Xatolik: ' + e.message); }
+      onToast?.(t('toast_tx_assigned')); loadData();
+    } catch (e) { alert(e.message); }
     finally { setAssigning(false); }
   }
 
   async function submitManual() {
     if (!manualForm.contract_number || !manualForm.amount || manualForm.payment_months.length === 0) {
-      onToast?.("Barcha majburiy maydonlarni to'ldiring"); return;
+      onToast?.(t('toast_tx_required')); return;
     }
     setManualSaving(true);
     try {
@@ -1991,25 +1998,25 @@ export function TransactionsScreen({ onToast } = {}) {
       }
       setShowManual(false); setManualWithProof(false);
       setManualForm({ contract_number: '', amount: '', payment_months: [], source: 'cash', comment: '', payment_year: new Date().getFullYear(), paid_at: todayDateTimeLocal(), proof_file: null });
-      onToast?.("To'lov kiritildi"); loadData();
-    } catch (e) { onToast?.('Xatolik: ' + e.message); }
+      onToast?.(t('toast_tx_added')); loadData();
+    } catch (e) { onToast?.(e.message); }
     finally { setManualSaving(false); }
   }
 
   function sourceLabel(v) {
     const s = String(v || '').trim().toLowerCase();
-    if (s === 'cash') return 'Naqd';
+    if (s === 'cash') return t('tx_src_cash');
     if (s === 'click') return 'Click';
     if (s === 'payme') return 'Payme';
-    if (s === 'bank') return 'Bank';
+    if (s === 'bank') return t('tx_src_bank');
     return String(v || '—');
   }
 
   function statusLabel(v) {
     const s = String(v || '').trim().toLowerCase();
-    if (s === 'success') return { cls: 'success', text: "To'langan" };
-    if (s === 'pending') return { cls: 'warning', text: 'Kutilmoqda' };
-    if (s === 'cancelled' || s === 'failed') return { cls: 'danger', text: 'Bekor' };
+    if (s === 'success') return { cls: 'success', text: t('tx_st_success') };
+    if (s === 'pending') return { cls: 'warning', text: t('tx_st_pending') };
+    if (s === 'cancelled' || s === 'failed') return { cls: 'danger', text: t('tx_st_cancelled') };
     return { cls: '', text: v || '—' };
   }
 
@@ -2017,58 +2024,58 @@ export function TransactionsScreen({ onToast } = {}) {
   const pageTotal = rows.reduce((s, r) => s + (r.amount || 0), 0);
   const colCount = scope === 'unassigned' ? 8 : 7;
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
 
   return (
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">To'lovlar</h1>
-          <div className="page-sub">{totalCount} ta tranzaksiya · {fmt.format(pageTotal)} so'm (sahifa)</div>
+          <h1 className="page-title">{t('transactions_title')}</h1>
+          <div className="page-sub">{totalCount} ta {t('nav_transactions').toLowerCase()} · {fmt.format(pageTotal)} so'm</div>
         </div>
         <div className="page-actions">
-          <button className="btn primary" onClick={() => { setManualForm(p => ({ ...p, paid_at: p.paid_at || todayDateTimeLocal() })); setShowManual(true); }}><I.Plus size={15} /> Qo'lda to'lov</button>
+          <button className="btn primary" onClick={() => { setManualForm(p => ({ ...p, paid_at: p.paid_at || todayDateTimeLocal() })); setShowManual(true); }}><I.Plus size={15} /> {t('add')}</button>
           {selectedIds.length > 0 && (
             <button className="btn ghost" style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }} onClick={handleBulkDelete} disabled={deleting}>
-              <I.Trash2 size={15} /> O'chirish ({selectedIds.length})
+              <I.Trash2 size={15} /> {t('delete')} ({selectedIds.length})
             </button>
           )}
-          <button className="btn" onClick={handleExport}><I.Download size={15} /> Export</button>
+          <button className="btn" onClick={handleExport}><I.Download size={15} /> {t('export')}</button>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <select value={scope} onChange={e => { setScope(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="all">Barcha</option>
-          <option value="unassigned">Biriktirilmagan</option>
+          <option value="all">{t('tx_scope_all')}</option>
+          <option value="unassigned">{t('tx_scope_unassigned')}</option>
         </select>
         <select value={source} onChange={e => { setSource(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">Barcha manba</option>
-          <option value="cash">Naqd</option>
+          <option value="">{t('tx_src_all')}</option>
+          <option value="cash">{t('tx_src_cash')}</option>
           <option value="click">Click</option>
           <option value="payme">Payme</option>
-          <option value="bank">Bank</option>
+          <option value="bank">{t('tx_src_bank')}</option>
         </select>
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">Barcha status</option>
-          <option value="success">To'langan</option>
-          <option value="pending">Kutilmoqda</option>
-          <option value="cancelled">Bekor</option>
+          <option value="">{t('tx_st_all')}</option>
+          <option value="success">{t('tx_st_success')}</option>
+          <option value="pending">{t('tx_st_pending')}</option>
+          <option value="cancelled">{t('tx_st_cancelled')}</option>
         </select>
-        <input type="number" placeholder="Yil" value={paymentYear} onChange={e => { setPaymentYear(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 80 }} />
+        <input type="number" placeholder={t('year_label')} value={paymentYear} onChange={e => { setPaymentYear(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 80 }} />
         <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         {(source || statusFilter || fromDate || toDate || paymentYear) && (
           <button className="btn ghost" onClick={() => { setSource(''); setStatusFilter(''); setFromDate(''); setToDate(''); setPaymentYear(''); setPage(1); }} style={{ height: 36, fontSize: 13 }}>
-            <I.X size={13} /> Tozalash
+            <I.X size={13} /> {t('clear_filters')}
           </button>
         )}
       </div>
 
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
-          <Stat label="Jami to'lov" value={`${fmt.format(stats.total_paid || 0)} so'm`} tone="success" icon={I.Wallet} />
-          <Stat label="Muvaffaqiyatli" value={stats.successful_transactions || 0} tone="navy" icon={I.Check} />
+          <Stat label={t('tx_stat_total_paid')} value={`${fmt.format(stats.total_paid || 0)} so'm`} tone="success" icon={I.Wallet} />
+          <Stat label={t('tx_stat_success_count')} value={stats.successful_transactions || 0} tone="navy" icon={I.Check} />
           <Stat label="Click" value={stats.click_transactions || 0} icon={I.CreditCard} />
           <Stat label="Payme" value={stats.payme_transactions || 0} icon={I.CreditCard} />
         </div>
@@ -2081,14 +2088,14 @@ export function TransactionsScreen({ onToast } = {}) {
               <th style={{ width: 36, padding: '0 8px' }}>
                 <input type="checkbox" checked={allSelected} onChange={e => setSelectedIds(e.target.checked ? rows.map(r => r.id) : [])} />
               </th>
-              <th>Sana</th><th>O'quvchi</th><th>Manba</th><th>Oylar</th>
-              <th style={{ textAlign: 'right' }}>Summa</th><th>Status</th>
+              <th>{t('transactions_col_date')}</th><th>{t('transactions_col_student')}</th><th>{t('transactions_col_source')}</th><th>{t('tx_months_col')}</th>
+              <th style={{ textAlign: 'right' }}>{t('tx_amount_col')}</th><th>{t('transactions_col_status')}</th>
               {scope === 'unassigned' && <th></th>}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={colCount} style={{ padding: 18, color: 'var(--muted)' }}>{loadError || 'Tranzaksiya topilmadi'}</td></tr>
+              <tr><td colSpan={colCount} style={{ padding: 18, color: 'var(--muted)' }}>{loadError || t('tx_not_found_msg')}</td></tr>
             )}
             {rows.map(t => {
               const st = statusLabel(t.status);
@@ -2106,7 +2113,7 @@ export function TransactionsScreen({ onToast } = {}) {
                   <td style={{ cursor: 'pointer' }} onClick={() => openDetail(t.id, t)}><span className={'chip' + (st.cls ? ` ${st.cls}` : '')}>{st.text}</span></td>
                   {scope === 'unassigned' && (
                     <td>
-                      <button className="btn ghost" style={{ padding: '3px 10px', fontSize: 12 }} onClick={() => setAssignTxId(t.id)}>Biriktirish</button>
+                      <button className="btn ghost" style={{ padding: '3px 10px', fontSize: 12 }} onClick={() => setAssignTxId(t.id)}>{t('tx_assign_btn')}</button>
                     </td>
                   )}
                 </tr>
@@ -2118,9 +2125,9 @@ export function TransactionsScreen({ onToast } = {}) {
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12, alignItems: 'center' }}>
-          <button className="btn ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 14px' }}>‹ Oldingi</button>
+          <button className="btn ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 14px' }}>‹ {t('prev')}</button>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <button className="btn ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 14px' }}>Keyingi ›</button>
+          <button className="btn ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 14px' }}>{t('next')} ›</button>
         </div>
       )}
 
@@ -2129,25 +2136,25 @@ export function TransactionsScreen({ onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setDetail(null)}>
           <div className="card" style={{ width: 560, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Tranzaksiya #{detail.id}</h3>
+              <h3 style={{ margin: 0 }}>{t('transactions_title')} #{detail.id}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setDetail(null)}><I.X size={15} /></button>
             </div>
             {detailLoading ? (
-              <div className="empty" style={{ padding: 24 }}>Yuklanmoqda...</div>
+              <div className="empty" style={{ padding: 24 }}>{t('loading')}</div>
             ) : (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                   {[
-                    ['Summa', `${fmt.format(detail.amount || 0)} so'm`],
-                    ['Manba', sourceLabel(detail.source)],
-                    ['Status', statusLabel(detail.status).text],
-                    ['Sana', (detail.paid_at || detail.created_at || '').slice(0, 19).replace('T', ' ')],
-                    ['Oylar', (detail.payment_months || []).map(m => monthName(m)).join(', ') || '—'],
-                    ["O'quvchi", detail.student_full_name || (detail.student_id ? `#${detail.student_id}` : '—')],
-                    ['Shartnoma', detail.contract_number || (detail.contract_id ? `#${detail.contract_id}` : '—')],
-                    ["To'lov yili", detail.payment_year || '—'],
+                    [t('tx_amount_col'), `${fmt.format(detail.amount || 0)} so'm`],
+                    [t('transactions_col_source'), sourceLabel(detail.source)],
+                    [t('transactions_col_status'), statusLabel(detail.status).text],
+                    [t('transactions_col_date'), (detail.paid_at || detail.created_at || '').slice(0, 19).replace('T', ' ')],
+                    [t('tx_months_col'), (detail.payment_months || []).map(m => monthName(m)).join(', ') || '—'],
+                    [t('transactions_col_student'), detail.student_full_name || (detail.student_id ? `#${detail.student_id}` : '—')],
+                    [t('transactions_col_contract'), detail.contract_number || (detail.contract_id ? `#${detail.contract_id}` : '—')],
+                    [t('tx_py_label'), detail.payment_year || '—'],
                     ['External ID', detail.external_id || '—'],
-                    ['Izoh', detail.comment || '—'],
+                    [t('tx_note_label'), detail.comment || '—'],
                   ].map(([k, v]) => (
                     <div key={k}>
                       <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 4 }}>{k}</div>
@@ -2158,18 +2165,18 @@ export function TransactionsScreen({ onToast } = {}) {
                 {detail.settlement_document_url && (
                   <div style={{ marginBottom: 10 }}>
                     <a href={detail.settlement_document_url} target="_blank" rel="noopener noreferrer" className="btn ghost" style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <I.File size={13} /> Hujjatni ko'rish
+                      <I.File size={13} /> {t('tx_view_document')}
                     </a>
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   {detail.status !== 'cancelled' && detail.status !== 'failed' && (
                     <button className="btn ghost" style={{ color: 'var(--warning)', borderColor: 'var(--warning)' }} onClick={() => handleCancel(detail.id)}>
-                      <I.XCircle size={14} /> Bekor qilish
+                      <I.XCircle size={14} /> {t('tx_cancel_action')}
                     </button>
                   )}
                   <button className="btn ghost" style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }} onClick={() => handleDelete(detail.id)}>
-                    <I.Trash2 size={14} /> O'chirish
+                    <I.Trash2 size={14} /> {t('delete')}
                   </button>
                 </div>
               </>
@@ -2183,23 +2190,23 @@ export function TransactionsScreen({ onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setAssignTxId(null)}>
           <div className="card" style={{ width: 420, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Tranzaksiyani biriktirish</h3>
+              <h3 style={{ margin: 0 }}>{t('tx_assign_modal')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setAssignTxId(null)}><I.X size={15} /></button>
             </div>
             <div style={{ display: 'grid', gap: 10 }}>
               <div className="field">
-                <label>O'quvchi ID *</label>
-                <input type="number" value={assignForm.student_id} onChange={e => setAssignForm(p => ({ ...p, student_id: e.target.value }))} placeholder="O'quvchi ID raqami" />
+                <label>{t('tx_st_id')}</label>
+                <input type="number" value={assignForm.student_id} onChange={e => setAssignForm(p => ({ ...p, student_id: e.target.value }))} placeholder={t('tx_st_id')} />
               </div>
               <div className="field">
-                <label>Shartnoma ID *</label>
-                <input type="number" value={assignForm.contract_id} onChange={e => setAssignForm(p => ({ ...p, contract_id: e.target.value }))} placeholder="Shartnoma ID raqami" />
+                <label>{t('tx_ct_id')}</label>
+                <input type="number" value={assignForm.contract_id} onChange={e => setAssignForm(p => ({ ...p, contract_id: e.target.value }))} placeholder={t('tx_ct_id')} />
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button className="btn ghost" onClick={() => setAssignTxId(null)}>Bekor</button>
+              <button className="btn ghost" onClick={() => setAssignTxId(null)}>{t('cancel')}</button>
               <button className="btn primary" onClick={handleAssign} disabled={assigning}>
-                {assigning ? 'Biriktirimoqda...' : 'Biriktirish'}
+                {assigning ? t('tx_doing_assign') : t('tx_assign_btn')}
               </button>
             </div>
           </div>
@@ -2211,34 +2218,34 @@ export function TransactionsScreen({ onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setShowManual(false)}>
           <div className="card" style={{ width: 520, padding: 18, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h3 style={{ margin: 0 }}>Qo'lda to'lov kiritish</h3>
+              <h3 style={{ margin: 0 }}>{t('tx_manual_modal')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => { setShowManual(false); setManualWithProof(false); }}><I.X size={15} /></button>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13, cursor: 'pointer' }}>
               <input type="checkbox" checked={manualWithProof} onChange={e => setManualWithProof(e.target.checked)} />
-              Hujjat bilan to'lov (fayl yuklash)
+              {t('tx_proof_toggle')}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="field" style={{ gridColumn: 'span 2' }}>
-                <label>Shartnoma raqami *</label>
+                <label>{t('tx_ct_no_label')}</label>
                 <input value={manualForm.contract_number} onChange={e => setManualForm(p => ({ ...p, contract_number: e.target.value }))} placeholder="1-2026" />
                 {(manualContractLoading || manualContractError || manualContractMatches.length > 0 || manualForm.contract_number.trim().length >= 2) && (
                   <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-2)', overflow: 'hidden' }}>
                     {manualContractLoading && (
-                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--muted)' }}>Shartnoma qidirilmoqda...</div>
+                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--muted)' }}>{t('tx_contract_searching')}</div>
                     )}
                     {!manualContractLoading && manualContractError && (
                       <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--brand-red)' }}>{manualContractError}</div>
                     )}
                     {!manualContractLoading && !manualContractError && manualContractMatches.length === 0 && manualForm.contract_number.trim().length >= 2 && (
-                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--muted)' }}>Mos shartnoma topilmadi</div>
+                      <div style={{ padding: '9px 10px', fontSize: 12.5, color: 'var(--muted)' }}>{t('tx_contract_not_found')}</div>
                     )}
                     {!manualContractLoading && manualContractMatches.map((contract) => {
                       const customerName = contract.custom_fields?.customer?.full_name || contract.customer_full_name || '';
                       const studentName = contract.student
                         ? `${contract.student.first_name || ''} ${contract.student.last_name || ''}`.trim()
                         : (contract.student_name || contract.full_name || '');
-                      const displayName = studentName || customerName || `O'quvchi #${contract.student_id || '-'}`;
+                      const displayName = studentName || customerName || `${t('student_num_prefix')}${contract.student_id || '-'}`;
                       return (
                         <button
                           key={contract.id}
@@ -2265,8 +2272,8 @@ export function TransactionsScreen({ onToast } = {}) {
                             <span style={{ fontSize: 12, fontWeight: 700 }}>{contract.contract_number || '-'}</span>
                           </div>
                           <div style={{ marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--muted)' }}>
-                            {customerName && studentName && <span>Mijoz: {customerName}</span>}
-                            <span>O'quvchi ID: #{contract.student_id || '-'}</span>
+                            {customerName && studentName && <span>{t('contracts_client_label')}: {customerName}</span>}
+                            <span>{t('transactions_col_student')} ID: #{contract.student_id || '-'}</span>
                             <span>{fmt.format(contract.monthly_fee || 0)} so'm</span>
                             <span>{contract.status || '-'}</span>
                           </div>
@@ -2277,28 +2284,28 @@ export function TransactionsScreen({ onToast } = {}) {
                 )}
               </div>
               <div className="field">
-                <label>Summa (so'm) *</label>
+                <label>{t('tx_sum_label')}</label>
                 <input type="number" value={manualForm.amount} onChange={e => setManualForm(p => ({ ...p, amount: e.target.value }))} placeholder="500000" />
               </div>
               <div className="field">
-                <label>Manba *</label>
+                <label>{t('tx_src_label')}</label>
                 <select value={manualForm.source} onChange={e => setManualForm(p => ({ ...p, source: e.target.value }))}>
-                  <option value="cash">Naqd</option>
+                  <option value="cash">{t('tx_src_cash')}</option>
                   <option value="click">Click</option>
                   <option value="payme">Payme</option>
-                  <option value="bank">Bank</option>
+                  <option value="bank">{t('tx_src_bank')}</option>
                 </select>
               </div>
               <div className="field">
-                <label>To'lov yili *</label>
+                <label>{t('tx_py_label')}</label>
                 <input type="number" value={manualForm.payment_year} onChange={e => setManualForm(p => ({ ...p, payment_year: Number(e.target.value) }))} />
               </div>
               <div className="field">
-                <label>To'lov sanasi</label>
+                <label>{t('tx_pd_label')}</label>
                 <input type="datetime-local" value={manualForm.paid_at} onChange={e => setManualForm(p => ({ ...p, paid_at: e.target.value }))} />
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
-                <label>Oylar * (tanlang)</label>
+                <label>{t('tx_months_select_label')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
                   {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
                     <label key={m} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, padding: '5px 4px', borderRadius: 6, border: '1px solid var(--border)', background: manualForm.payment_months.includes(m) ? 'var(--accent-soft,rgba(200,32,44,0.1))' : 'var(--surface)', cursor: 'pointer', fontWeight: manualForm.payment_months.includes(m) ? 700 : 400 }}>
@@ -2308,24 +2315,24 @@ export function TransactionsScreen({ onToast } = {}) {
                   ))}
                 </div>
                 {manualForm.payment_months.length > 0 && (
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Tanlangan: {manualForm.payment_months.map(m => monthName(m)).join(', ')}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{t('tx_selected_months')}: {manualForm.payment_months.map(m => monthName(m)).join(', ')}</div>
                 )}
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
-                <label>Izoh</label>
-                <input value={manualForm.comment} onChange={e => setManualForm(p => ({ ...p, comment: e.target.value }))} placeholder="Ixtiyoriy izoh" />
+                <label>{t('tx_note_label')}</label>
+                <input value={manualForm.comment} onChange={e => setManualForm(p => ({ ...p, comment: e.target.value }))} placeholder={t('tx_note_label')} />
               </div>
               {manualWithProof && (
                 <div className="field" style={{ gridColumn: 'span 2' }}>
-                  <label>Hujjat fayli (PDF, JPG, PNG) *</label>
+                  <label>{t('tx_proof_label')}</label>
                   <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setManualForm(p => ({ ...p, proof_file: e.target.files?.[0] || null }))} />
                 </div>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button className="btn ghost" onClick={() => { setShowManual(false); setManualWithProof(false); }}>Bekor</button>
+              <button className="btn ghost" onClick={() => { setShowManual(false); setManualWithProof(false); }}>{t('cancel')}</button>
               <button className="btn primary" onClick={submitManual} disabled={manualSaving}>
-                {manualSaving ? 'Saqlanmoqda...' : "To'lovni kiritish"}
+                {manualSaving ? t('saving') : t('tx_submit_btn')}
               </button>
             </div>
           </div>
@@ -2339,6 +2346,7 @@ export function TransactionsScreen({ onToast } = {}) {
 
 export function ReportsScreen() {
   const I = Icon;
+  const { t } = useT();
   const [tab, setTab] = React.useState('dashboard');
   const [summary, setSummary] = React.useState(null);
   const [financeReport, setFinanceReport] = React.useState(null);
@@ -2415,7 +2423,7 @@ export function ReportsScreen() {
       .finally(() => setPayersLoading(false));
   }, [tab, payersYear, payersMonth]);
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
 
   const safeSummary = summary || {};
 
@@ -2472,11 +2480,11 @@ export function ReportsScreen() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Hisobotlar</h1>
-          <div className="page-sub">Dashboard va moliyaviy ko'rsatkichlar</div>
+          <h1 className="page-title">{t('nav_reports')}</h1>
+          <div className="page-sub">{t('rpt_subtitle')}</div>
         </div>
         <div className="page-actions">
-          <button className="btn" onClick={handleDebtorsExport}><I.Download size={15} /> Qarzdorlar</button>
+          <button className="btn" onClick={handleDebtorsExport}><I.Download size={15} /> {t('rpt_debtors')}</button>
           <button className="btn" onClick={handleExcel}><I.Download size={15} /> Excel</button>
         </div>
       </div>
@@ -2484,13 +2492,13 @@ export function ReportsScreen() {
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="tabs">
           {[
-            { id: 'dashboard', label: 'Dashboard' },
-            { id: 'finance', label: 'Moliya hisoboti' },
-            { id: 'attendance', label: 'Davomat' },
-            { id: 'debtors', label: 'Qarzdorlar' },
-            { id: 'payers', label: "To'lovchilar" },
-          ].map(t => (
-            <div key={t.id} className={'tab' + (tab === t.id ? ' active' : '')} onClick={() => setTab(t.id)}>{t.label}</div>
+            { id: 'dashboard', label: t('rpt_dashboard') },
+            { id: 'finance', label: t('rpt_finance') },
+            { id: 'attendance', label: t('rpt_attendance') },
+            { id: 'debtors', label: t('rpt_debtors') },
+            { id: 'payers', label: t('rpt_payers') },
+          ].map(tb => (
+            <div key={tb.id} className={'tab' + (tab === tb.id ? ' active' : '')} onClick={() => setTab(tb.id)}>{tb.label}</div>
           ))}
         </div>
       </div>
@@ -2500,15 +2508,15 @@ export function ReportsScreen() {
       {tab === 'dashboard' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
           {[
-            { label: "Faol o'quvchilar", value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--text)' },
-            { label: "Bugungi tushum", value: safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—', icon: I.TrendingUp, color: 'var(--success)' },
+            { label: t('rpt_active_students'), value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--text)' },
+            { label: t('rpt_today_revenue'), value: safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—', icon: I.TrendingUp, color: 'var(--success)' },
             {
-              label: "Qarzdorlar soni", value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)',
+              label: t('rpt_debtors_count_lbl'), value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)',
               sub: (safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt) != null
-                ? `${fmt.format(safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt)} so'm jami qarz`
+                ? `${fmt.format(safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt)} so'm ${t('rpt_total_debt')}`
                 : null,
             },
-            { label: "Bugungi sessiyalar", value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy,#0F1F4D)' },
+            { label: t('rpt_today_sessions'), value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy,#0F1F4D)' },
           ].map((item, idx, arr) => (
             <div key={item.label} style={{
               padding: '28px 24px',
@@ -2531,22 +2539,22 @@ export function ReportsScreen() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
             {[
               {
-                label: "Jami daromad",
+                label: t('rpt_total_income'),
                 value: financeReport ? `${fmt.format(financeReport.total_income ?? financeReport.total_revenue ?? 0)} so'm` : (txStats ? `${fmt.format(txStats.total_paid || 0)} so'm` : '—'),
                 icon: I.TrendingUp, color: 'var(--success)',
               },
               {
-                label: "To'langan",
+                label: t('rpt_paid'),
                 value: financeReport?.total_paid != null ? `${fmt.format(financeReport.total_paid)} so'm` : (txStats ? `${fmt.format(txStats.total_paid || 0)} so'm` : '—'),
                 icon: I.Check, color: 'var(--brand-navy,#0F1F4D)',
               },
               {
-                label: "Jami qarz",
+                label: t('rpt_total_debt'),
                 value: financeReport?.total_debt != null ? `${fmt.format(financeReport.total_debt)} so'm` : '—',
                 icon: I.AlertTriangle, color: 'var(--brand-red)',
               },
               {
-                label: "Muvaffaqiyatli tranzaksiyalar",
+                label: t('rpt_success_tx'),
                 value: txStats?.successful_transactions ?? '—',
                 icon: I.Wallet, color: 'var(--text)',
               },
@@ -2567,11 +2575,11 @@ export function ReportsScreen() {
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
             <div className="field" style={{ margin: 0 }}>
-              <label style={{ fontSize: 12 }}>Dan</label>
+              <label style={{ fontSize: 12 }}>{t('rpt_from')}</label>
               <input type="date" value={financeFrom} onChange={e => setFinanceFrom(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }} />
             </div>
             <div className="field" style={{ margin: 0 }}>
-              <label style={{ fontSize: 12 }}>Gacha</label>
+              <label style={{ fontSize: 12 }}>{t('rpt_to')}</label>
               <input type="date" value={financeTo} onChange={e => setFinanceTo(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }} />
             </div>
           </div>
@@ -2580,9 +2588,9 @@ export function ReportsScreen() {
             <div className="card" style={{ padding: 16 }}>
               {false && financeReport.by_month && Array.isArray(financeReport.by_month) && financeReport.by_month.length > 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>OY BO'YICHA</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>{t('rpt_by_month_title')}</div>
                   <table className="table">
-                    <thead><tr><th>Oy</th><th style={{ textAlign: 'right' }}>Daromad</th><th style={{ textAlign: 'right' }}>Kutilgan</th></tr></thead>
+                    <thead><tr><th>{t('rpt_month_col')}</th><th style={{ textAlign: 'right' }}>{t('rpt_income_col')}</th><th style={{ textAlign: 'right' }}>{t('rpt_expected_col')}</th></tr></thead>
                     <tbody>
                       {financeReport.by_month.map((m, i) => (
                         <tr key={i}>
@@ -2597,9 +2605,9 @@ export function ReportsScreen() {
               )}
               {financeReport.breakdown && Array.isArray(financeReport.breakdown) && financeReport.breakdown.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>TO'LOV MANBAI BO'YICHA</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>{t('rpt_by_source_title')}</div>
                   <table className="table">
-                    <thead><tr><th>Manbai</th><th style={{ textAlign: 'right' }}>Summa</th><th style={{ textAlign: 'right' }}>Miqdori</th></tr></thead>
+                    <thead><tr><th>{t('rpt_source_col')}</th><th style={{ textAlign: 'right' }}>{t('rpt_sum_col')}</th><th style={{ textAlign: 'right' }}>{t('rpt_count_col')}</th></tr></thead>
                     <tbody>
                       {financeReport.breakdown.map((b, i) => (
                         <tr key={i}>
@@ -2614,9 +2622,9 @@ export function ReportsScreen() {
               )}
               {financeReport.by_month && Array.isArray(financeReport.by_month) && financeReport.by_month.length > 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>OY BO'YICHA</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>{t('rpt_by_month_title')}</div>
                   <table className="table">
-                    <thead><tr><th>Oy</th><th style={{ textAlign: 'right' }}>Daromad</th><th style={{ textAlign: 'right' }}>Kutilgan</th></tr></thead>
+                    <thead><tr><th>{t('rpt_month_col')}</th><th style={{ textAlign: 'right' }}>{t('rpt_income_col')}</th><th style={{ textAlign: 'right' }}>{t('rpt_expected_col')}</th></tr></thead>
                     <tbody>
                       {financeReport.by_month.map((m, i) => (
                         <tr key={i}>
@@ -2631,23 +2639,23 @@ export function ReportsScreen() {
               )}
             </div>
           ) : (
-            <div className="empty" style={{ padding: 48 }}>Moliya hisoboti bo'sh</div>
+            <div className="empty" style={{ padding: 48 }}>{t('rpt_finance_empty')}</div>
           )}
         </div>
       )}
 
       {tab === 'attendance' && (
         <div className="card" style={{ padding: 16 }}>
-          <div className="card-title" style={{ marginBottom: 12 }}>Davomat bo'yicha guruhlar</div>
+          <div className="card-title" style={{ marginBottom: 12 }}>{t('rpt_att_groups')}</div>
           {attendanceGroups.length === 0 ? (
-            <div className="empty" style={{ padding: 18 }}>Hisobot topilmadi</div>
+            <div className="empty" style={{ padding: 18 }}>{t('rpt_att_not_found')}</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {attendanceGroups.map((g) => (
                 <div key={g.group_id || g.id} style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
                   <div style={{ fontWeight: 700, marginBottom: 6 }}>{g.group_name}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-                    {g.total_sessions} sessiya · {g.total_students} o'quvchi
+                    {g.total_sessions} {t('nav_sessions').toLowerCase()} · {g.total_students} {t('nav_students').toLowerCase()}
                   </div>
                   <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
                     <div style={{ width: `${g.attendance_percentage || g.attendance_rate || 0}%`, height: '100%', background: 'var(--brand-navy)' }} />
@@ -2663,27 +2671,27 @@ export function ReportsScreen() {
       {tab === 'debtors' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{debtors.length} ta qarzdor o'quvchi</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{debtors.length} {t('rpt_debtors_count_sfx')}</div>
             <button className="btn" onClick={handleDebtorsExport}><I.Download size={15} /> Excel export</button>
           </div>
           {debtorsLoading ? (
-            <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>
+            <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>O'quvchi</th>
-                    <th>Shartnoma</th>
-                    <th>Guruh</th>
-                    <th>Telefon</th>
-                    <th>Muddati o'tgan oylar</th>
-                    <th style={{ textAlign: 'right' }}>Qarz miqdori</th>
+                    <th>{t('rpt_debtors_col_student')}</th>
+                    <th>{t('rpt_debtors_col_contract')}</th>
+                    <th>{t('rpt_debtors_col_group')}</th>
+                    <th>{t('rpt_debtors_col_phone')}</th>
+                    <th>{t('rpt_debtors_col_overdue')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('rpt_debtors_col_debt')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {debtors.length === 0 && (
-                    <tr><td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>Qarzdor topilmadi</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>{t('rpt_debtors_none')}</td></tr>
                   )}
                   {debtors.map((d, idx) => (
                     <tr key={d.student_id || d.id || idx}>
@@ -2718,32 +2726,32 @@ export function ReportsScreen() {
               {[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             <select value={payersMonth} onChange={e => setPayersMonth(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-              <option value="">Barcha oylar</option>
+              <option value="">{t('rpt_all_months')}</option>
               {['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'].map((m, i) => (
                 <option key={i+1} value={i+1}>{m}</option>
               ))}
             </select>
             <div style={{ flex: 1 }} />
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{payers.length} ta to'lovchi</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{payers.length} {t('rpt_payers_count_sfx')}</div>
             <button className="btn" onClick={handlePayersExport}><I.Download size={15} /> Excel export</button>
           </div>
           {payersLoading ? (
-            <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>
+            <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>O'quvchi</th>
-                    <th>Shartnoma</th>
-                    <th>Guruh</th>
-                    <th>To'langan oylar</th>
-                    <th style={{ textAlign: 'right' }}>Jami to'lov</th>
+                    <th>{t('rpt_payers_col_student')}</th>
+                    <th>{t('rpt_payers_col_contract')}</th>
+                    <th>{t('rpt_payers_col_group')}</th>
+                    <th>{t('rpt_payers_col_months')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('rpt_payers_col_total')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payers.length === 0 && (
-                    <tr><td colSpan={5} style={{ padding: 18, color: 'var(--muted)' }}>To'lovchilar topilmadi</td></tr>
+                    <tr><td colSpan={5} style={{ padding: 18, color: 'var(--muted)' }}>{t('rpt_payers_none')}</td></tr>
                   )}
                   {payers.map((p, idx) => {
                     const MONTH_NAMES = ['','Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
@@ -2779,6 +2787,7 @@ export function ReportsScreen() {
 
 export function WaitingListScreen({ onToast } = {}) {
   const I = Icon;
+  const { t } = useT();
   const [rows, setRows] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -2829,14 +2838,14 @@ export function WaitingListScreen({ onToast } = {}) {
   React.useEffect(() => { loadList(); }, [groupFilter, birthYearFilter, page]);
 
   async function loadNext() {
-    if (!groupFilter) { alert("Guruhni tanlang"); return; }
+    if (!groupFilter) { alert(t('group_required_alert')); return; }
     setNextLoading(true);
     try {
       const res = await apiGetWaitingListNext(Number(groupFilter));
       setNextEntry(res?.data || null);
       setShowNextModal(true);
     } catch (e) {
-      alert('Xatolik: ' + e.message);
+      alert(e.message);
     } finally {
       setNextLoading(false);
     }
@@ -2861,7 +2870,7 @@ export function WaitingListScreen({ onToast } = {}) {
 
   async function save() {
     if (!form.student_first_name.trim() || !form.student_last_name.trim() || !form.birth_year) {
-      onToast?.("Majburiy maydonlarni to'ldiring");
+      onToast?.(t('toast_required'));
       return;
     }
     setSaving(true);
@@ -2880,24 +2889,24 @@ export function WaitingListScreen({ onToast } = {}) {
       };
       if (editing) await apiUpdateWaitingList(editing.id, payload);
       else await apiCreateWaitingList(payload);
-      onToast?.(editing ? "Nomzod o'zgartirildi" : "Nomzod qo'shildi");
+      onToast?.(editing ? t('toast_candidate_updated') : t('toast_candidate_added'));
       setShowModal(false);
       loadList();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(id) {
-    if (!confirm("Rostdan ham o'chirasizmi?")) return;
+    if (!confirm(t('delete') + '?')) return;
     try {
       await apiDeleteWaitingList(id);
-      onToast?.("Nomzod o'chirildi");
+      onToast?.(t('toast_candidate_deleted'));
       loadList();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     }
   }
 
@@ -2911,16 +2920,16 @@ export function WaitingListScreen({ onToast } = {}) {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Kutish ro'yxati</h1>
-          <div className="page-sub">{totalCount} ta nomzod</div>
+          <h1 className="page-title">{t('waiting_title')}</h1>
+          <div className="page-sub">{totalCount} {t('wl_candidates_sfx')}</div>
         </div>
         <div className="page-actions">
           {groupFilter && (
             <button className="btn ghost" onClick={loadNext} disabled={nextLoading}>
-              <I.Users size={15}/> {nextLoading ? 'Yuklanmoqda...' : 'Navbatdagi'}
+              <I.Users size={15}/> {nextLoading ? t('loading') : t('wl_next')}
             </button>
           )}
-          <button className="btn primary" onClick={openNew}><I.UserPlus size={15} /> Nomzod qo'shish</button>
+          <button className="btn primary" onClick={openNew}><I.UserPlus size={15} /> {t('waiting_new')}</button>
         </div>
       </div>
 
@@ -2928,36 +2937,36 @@ export function WaitingListScreen({ onToast } = {}) {
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
         <SearchableGroupSelect value={groupFilter} onChange={v => { setGroupFilter(v); setPage(1); }} groups={groups} />
         <input
-          type="number" placeholder="Tug'ilgan yil" value={birthYearFilter}
+          type="number" placeholder={t('wl_birth_year')} value={birthYearFilter}
           onChange={e => { setBirthYearFilter(e.target.value); setPage(1); }}
           style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 130 }}
         />
         {(groupFilter || birthYearFilter) && (
           <button className="btn sm ghost" onClick={() => { setGroupFilter(''); setBirthYearFilter(''); setPage(1); }}>
-            <I.X size={13}/> Filtrni tozalash
+            <I.X size={13}/> {t('wl_clear')}
           </button>
         )}
       </div>
 
       {loading ? (
-        <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>
+        <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>O'quvchi</th>
-                <th>Ota-ona</th>
-                <th>Tug'ilgan yil</th>
-                <th>Guruh</th>
-                <th>Prioritet</th>
-                <th>Qo'shilgan</th>
-                <th>Izoh</th>
+                <th>{t('waiting_col_name')}</th>
+                <th>{t('wl_parent')}</th>
+                <th>{t('wl_birth_year')}</th>
+                <th>{t('waiting_col_group')}</th>
+                <th>{t('wl_priority')}</th>
+                <th>{t('waiting_col_date')}</th>
+                <th>{t('wl_notes')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={8} style={{ padding: 18, color: 'var(--muted)' }}>Nomzod topilmadi</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} style={{ padding: 18, color: 'var(--muted)' }}>{t('waiting_not_found')}</td></tr>}
               {rows.map((r) => {
                 const p = Number(r.priority || 0);
                 return (
@@ -2965,10 +2974,10 @@ export function WaitingListScreen({ onToast } = {}) {
                     <td style={{ fontWeight: 600 }}>{r.student_first_name} {r.student_last_name}</td>
                     <td style={{ fontSize: 12.5 }}>
                       {(r.father_name || r.father_phone) && (
-                        <div><span style={{ color: 'var(--muted)' }}>Ota:</span> {r.father_name || '—'} {r.father_phone ? `· ${r.father_phone}` : ''}</div>
+                        <div><span style={{ color: 'var(--muted)' }}>{t('wl_father_name')}:</span> {r.father_name || '—'} {r.father_phone ? `· ${r.father_phone}` : ''}</div>
                       )}
                       {(r.mother_name || r.mother_phone) && (
-                        <div><span style={{ color: 'var(--muted)' }}>Ona:</span> {r.mother_name || '—'} {r.mother_phone ? `· ${r.mother_phone}` : ''}</div>
+                        <div><span style={{ color: 'var(--muted)' }}>{t('wl_mother_name')}:</span> {r.mother_name || '—'} {r.mother_phone ? `· ${r.mother_phone}` : ''}</div>
                       )}
                       {!r.father_name && !r.father_phone && !r.mother_name && !r.mother_phone && <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
@@ -2985,8 +2994,8 @@ export function WaitingListScreen({ onToast } = {}) {
                     <td style={{ color: 'var(--muted)', fontSize: 12.5, maxWidth: 160 }}>{r.notes || '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="icon-btn" style={{ width: 30, height: 30 }} title="Tahrirlash" onClick={() => openEdit(r)}><I.Edit size={13} /></button>
-                        <button className="icon-btn" style={{ width: 30, height: 30, color: 'var(--brand-red)' }} title="O'chirish" onClick={() => remove(r.id)}><I.Trash size={13} /></button>
+                        <button className="icon-btn" style={{ width: 30, height: 30 }} title={t('edit')} onClick={() => openEdit(r)}><I.Edit size={13} /></button>
+                        <button className="icon-btn" style={{ width: 30, height: 30, color: 'var(--brand-red)' }} title={t('delete')} onClick={() => remove(r.id)}><I.Trash size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -2996,9 +3005,9 @@ export function WaitingListScreen({ onToast } = {}) {
           </table>
           {totalPages > 1 && (
             <div style={{ display: 'flex', gap: 6, padding: '12px 16px', borderTop: '1px solid var(--border)', alignItems: 'center' }}>
-              <button className="btn sm ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>‹ Oldingi</button>
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{page} / {totalPages} · Jami: {totalCount}</span>
-              <button className="btn sm ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Keyingi ›</button>
+              <button className="btn sm ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>‹ {t('prev')}</button>
+              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{page} / {totalPages} · {t('total')}: {totalCount}</span>
+              <button className="btn sm ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>{t('next')} ›</button>
             </div>
           )}
         </div>
@@ -3009,33 +3018,33 @@ export function WaitingListScreen({ onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 120 }} onClick={() => setShowNextModal(false)}>
           <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 17 }}>Navbatdagi nomzod — {groupMap[groupFilter] || `Guruh #${groupFilter}`}</h3>
+              <h3 style={{ margin: 0, fontSize: 17 }}>{t('wl_next_modal_title')} — {groupMap[groupFilter] || `${t('nav_groups')} #${groupFilter}`}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setShowNextModal(false)}><I.X size={15}/></button>
             </div>
             {nextEntry ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ padding: '12px 14px', background: 'var(--success-soft)', borderRadius: 10, border: '1px solid var(--success)' }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--success)' }}>{nextEntry.student_first_name} {nextEntry.student_last_name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 2 }}>Tug'ilgan yil: {nextEntry.birth_year || '—'} · Prioritet: <strong>{nextEntry.priority ?? 0}</strong></div>
+                  <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 2 }}>{t('wl_birth_year')}: {nextEntry.birth_year || '—'} · {t('wl_priority')}: <strong>{nextEntry.priority ?? 0}</strong></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {nextEntry.father_name && <div style={{ padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}><div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>OTA</div><div style={{ fontSize: 13, fontWeight: 600 }}>{nextEntry.father_name}</div>{nextEntry.father_phone && <div style={{ fontSize: 12.5, color: 'var(--accent)' }}>{nextEntry.father_phone}</div>}</div>}
-                  {nextEntry.mother_name && <div style={{ padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}><div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>ONA</div><div style={{ fontSize: 13, fontWeight: 600 }}>{nextEntry.mother_name}</div>{nextEntry.mother_phone && <div style={{ fontSize: 12.5, color: 'var(--accent)' }}>{nextEntry.mother_phone}</div>}</div>}
+                  {nextEntry.father_name && <div style={{ padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}><div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{t('wl_father_name').toUpperCase()}</div><div style={{ fontSize: 13, fontWeight: 600 }}>{nextEntry.father_name}</div>{nextEntry.father_phone && <div style={{ fontSize: 12.5, color: 'var(--accent)' }}>{nextEntry.father_phone}</div>}</div>}
+                  {nextEntry.mother_name && <div style={{ padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}><div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{t('wl_mother_name').toUpperCase()}</div><div style={{ fontSize: 13, fontWeight: 600 }}>{nextEntry.mother_name}</div>{nextEntry.mother_phone && <div style={{ fontSize: 12.5, color: 'var(--accent)' }}>{nextEntry.mother_phone}</div>}</div>}
                 </div>
                 {nextEntry.notes && <div style={{ padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, fontSize: 13, color: 'var(--muted)' }}>{nextEntry.notes}</div>}
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Qo'shilgan: {(nextEntry.created_at || '').slice(0, 10)}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{t('wl_added_date')}: {(nextEntry.created_at || '').slice(0, 10)}</div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button className="btn ghost" onClick={() => { setShowNextModal(false); openEdit(nextEntry); }}>
-                    <I.Edit size={13}/> Tahrirlash
+                    <I.Edit size={13}/> {t('edit')}
                   </button>
                   <button className="btn ghost" style={{ color: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}
                     onClick={() => { setShowNextModal(false); remove(nextEntry.id); }}>
-                    <I.Trash size={13}/> O'chirish
+                    <I.Trash size={13}/> {t('delete')}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="empty" style={{ padding: 24 }}>Bu guruh uchun kutish ro'yxati bo'sh</div>
+              <div className="empty" style={{ padding: 24 }}>{t('wl_empty_queue')}</div>
             )}
           </div>
         </div>
@@ -3046,26 +3055,26 @@ export function WaitingListScreen({ onToast } = {}) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 100 }} onClick={() => setShowModal(false)}>
           <div className="card" style={{ width: 540, padding: 22, boxShadow: 'var(--shadow-lg)', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>{editing ? 'Nomzodni tahrirlash' : 'Yangi nomzod'}</h3>
+              <h3 style={{ margin: 0 }}>{editing ? t('wl_edit_candidate') : t('wl_new_candidate')}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setShowModal(false)}><I.X size={15} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div className="field"><label>Ismi <span className="req">*</span></label><input value={form.student_first_name} onChange={(e) => setForm((p) => ({ ...p, student_first_name: e.target.value }))} /></div>
-              <div className="field"><label>Familiyasi <span className="req">*</span></label><input value={form.student_last_name} onChange={(e) => setForm((p) => ({ ...p, student_last_name: e.target.value }))} /></div>
-              <div className="field"><label>Tug'ilgan yil <span className="req">*</span></label><input type="number" min={2000} max={2020} value={form.birth_year} onChange={(e) => setForm((p) => ({ ...p, birth_year: e.target.value }))} placeholder="2010" /></div>
-              <div className="field"><label>Guruh</label>
-                <SearchableGroupSelect value={form.group_id} onChange={v => setForm(p => ({ ...p, group_id: v }))} groups={groups} placeholder="Tanlanmagan" />
+              <div className="field"><label>{t('wl_first_name_req')}</label><input value={form.student_first_name} onChange={(e) => setForm((p) => ({ ...p, student_first_name: e.target.value }))} /></div>
+              <div className="field"><label>{t('wl_last_name_req')}</label><input value={form.student_last_name} onChange={(e) => setForm((p) => ({ ...p, student_last_name: e.target.value }))} /></div>
+              <div className="field"><label>{t('wl_birth_year_req')}</label><input type="number" min={2000} max={2020} value={form.birth_year} onChange={(e) => setForm((p) => ({ ...p, birth_year: e.target.value }))} placeholder="2010" /></div>
+              <div className="field"><label>{t('nav_groups')}</label>
+                <SearchableGroupSelect value={form.group_id} onChange={v => setForm(p => ({ ...p, group_id: v }))} groups={groups} placeholder={t('all')} />
               </div>
-              <div className="field"><label>Ota ismi</label><input value={form.father_name} onChange={(e) => setForm((p) => ({ ...p, father_name: e.target.value }))} /></div>
-              <div className="field"><label>Ota telefoni</label><input value={form.father_phone} onChange={(e) => setForm((p) => ({ ...p, father_phone: e.target.value }))} placeholder="+998..." /></div>
-              <div className="field"><label>Ona ismi</label><input value={form.mother_name} onChange={(e) => setForm((p) => ({ ...p, mother_name: e.target.value }))} /></div>
-              <div className="field"><label>Ona telefoni</label><input value={form.mother_phone} onChange={(e) => setForm((p) => ({ ...p, mother_phone: e.target.value }))} placeholder="+998..." /></div>
-              <div className="field"><label>Prioritet (0–100)</label><input type="number" min={0} max={100} value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} /></div>
-              <div className="field" style={{ gridColumn: 'span 2' }}><label>Izoh</label><textarea rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} /></div>
+              <div className="field"><label>{t('wl_father_name')}</label><input value={form.father_name} onChange={(e) => setForm((p) => ({ ...p, father_name: e.target.value }))} /></div>
+              <div className="field"><label>{t('wl_father_phone')}</label><input value={form.father_phone} onChange={(e) => setForm((p) => ({ ...p, father_phone: e.target.value }))} placeholder="+998..." /></div>
+              <div className="field"><label>{t('wl_mother_name')}</label><input value={form.mother_name} onChange={(e) => setForm((p) => ({ ...p, mother_name: e.target.value }))} /></div>
+              <div className="field"><label>{t('wl_mother_phone')}</label><input value={form.mother_phone} onChange={(e) => setForm((p) => ({ ...p, mother_phone: e.target.value }))} placeholder="+998..." /></div>
+              <div className="field"><label>{t('wl_priority_label')}</label><input type="number" min={0} max={100} value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))} /></div>
+              <div className="field" style={{ gridColumn: 'span 2' }}><label>{t('wl_notes_label')}</label><textarea rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} /></div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-              <button className="btn ghost" onClick={() => setShowModal(false)}>Bekor</button>
-              <button className="btn primary" onClick={save} disabled={saving}><I.Check size={14} /> {saving ? 'Saqlanmoqda...' : 'Saqlash'}</button>
+              <button className="btn ghost" onClick={() => setShowModal(false)}>{t('cancel')}</button>
+              <button className="btn primary" onClick={save} disabled={saving}><I.Check size={14} /> {saving ? t('saving') : t('save')}</button>
             </div>
           </div>
         </div>
@@ -3078,6 +3087,7 @@ export function WaitingListScreen({ onToast } = {}) {
 
 export function AuditLogsScreen() {
   const I = Icon;
+  const { t } = useT();
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState('');
@@ -3135,14 +3145,14 @@ export function AuditLogsScreen() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Audit log</h1>
-          <div className="page-sub">{totalCount} ta yozuv</div>
+          <h1 className="page-title">{t('audit_title')}</h1>
+          <div className="page-sub">{totalCount} {t('audit_records_sfx')}</div>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <select value={entityType} onChange={e => { setEntityType(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">Barcha ob'ekt</option>
+          <option value="">{t('all')} {t('audit_col_entity').toLowerCase()}</option>
           <option value="student">student</option>
           <option value="user">user</option>
           <option value="contract">contract</option>
@@ -3152,7 +3162,7 @@ export function AuditLogsScreen() {
           <option value="attendance">attendance</option>
         </select>
         <select value={action} onChange={e => { setAction(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">Barcha amal</option>
+          <option value="">{t('all')} {t('audit_col_action').toLowerCase()}</option>
           <option value="CREATE">CREATE</option>
           <option value="UPDATE">UPDATE</option>
           <option value="DELETE">DELETE</option>
@@ -3163,38 +3173,38 @@ export function AuditLogsScreen() {
         <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <div style={{ display: 'flex', gap: 0 }}>
-          <input placeholder="Foydalanuvchi nomi..." value={userFilterInput} onChange={e => setUserFilterInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserFilter(userFilterInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
+          <input placeholder={t('audit_search_user')} value={userFilterInput} onChange={e => setUserFilterInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserFilter(userFilterInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
           <button className="btn" style={{ borderRadius: '0 8px 8px 0', height: 36 }} onClick={() => { setUserFilter(userFilterInput); setPage(1); }}><I.Search size={14} /></button>
         </div>
         <div style={{ display: 'flex', gap: 0 }}>
-          <input placeholder="Qidiruv..." value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
+          <input placeholder={t('audit_search_input')} value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
           <button className="btn" style={{ borderRadius: '0 8px 8px 0', height: 36 }} onClick={() => { setSearch(searchInput); setPage(1); }}><I.Search size={14} /></button>
         </div>
         {hasFilters && (
           <button className="btn ghost" onClick={() => { setEntityType(''); setAction(''); setFromDate(''); setToDate(''); setSearch(''); setSearchInput(''); setUserFilter(''); setUserFilterInput(''); setPage(1); }} style={{ height: 36, fontSize: 13 }}>
-            <I.X size={13} /> Tozalash
+            <I.X size={13} /> {t('audit_clear_btn')}
           </button>
         )}
       </div>
 
       {loading ? (
-        <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>
+        <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Sana</th>
-                <th>Foydalanuvchi</th>
-                <th>Amal</th>
-                <th>Ob'ekt</th>
-                <th>Nomi</th>
-                <th>Tavsif</th>
+                <th>{t('audit_col_time')}</th>
+                <th>{t('audit_col_user')}</th>
+                <th>{t('audit_col_action')}</th>
+                <th>{t('audit_col_entity')}</th>
+                <th>{t('audit_name_col')}</th>
+                <th>{t('audit_col_details')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>{loadError || 'Yozuv topilmadi'}</td></tr>
+                <tr><td colSpan={6} style={{ padding: 18, color: 'var(--muted)' }}>{loadError || t('audit_not_found')}</td></tr>
               )}
               {rows.map(r => (
                 <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => setDetail(r)}>
@@ -3213,9 +3223,9 @@ export function AuditLogsScreen() {
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12, alignItems: 'center' }}>
-          <button className="btn ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 14px' }}>‹ Oldingi</button>
+          <button className="btn ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 14px' }}>‹ {t('prev')}</button>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <button className="btn ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 14px' }}>Keyingi ›</button>
+          <button className="btn ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 14px' }}>{t('next')} ›</button>
         </div>
       )}
 
@@ -3224,17 +3234,17 @@ export function AuditLogsScreen() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'grid', placeItems: 'center', zIndex: 140 }} onClick={() => setDetail(null)}>
           <div className="card" style={{ width: 560, padding: 18 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ margin: 0 }}>Audit log #{detail.id}</h3>
+              <h3 style={{ margin: 0 }}>{t('audit_title')} #{detail.id}</h3>
               <button className="icon-btn" style={{ width: 30, height: 30 }} onClick={() => setDetail(null)}><I.X size={15} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {[
-                ['Sana', (detail.created_at || '').slice(0, 19).replace('T', ' ')],
-                ['Foydalanuvchi', detail.user_full_name || `#${detail.user_id}`],
-                ['Amal', detail.action],
-                ["Ob'ekt turi", detail.entity_type],
-                ["Ob'ekt ID", detail.entity_id],
-                ["Ob'ekt nomi", detail.entity_label],
+                [t('audit_detail_date'), (detail.created_at || '').slice(0, 19).replace('T', ' ')],
+                [t('audit_detail_user'), detail.user_full_name || `#${detail.user_id}`],
+                [t('audit_detail_action'), detail.action],
+                [t('audit_detail_entity_type'), detail.entity_type],
+                [t('audit_detail_entity_id'), detail.entity_id],
+                [t('audit_detail_entity_name'), detail.entity_label],
               ].map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 4 }}>{k}</div>
@@ -3244,13 +3254,13 @@ export function AuditLogsScreen() {
             </div>
             {detail.description && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 4 }}>Tavsif</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 4 }}>{t('audit_detail_desc')}</div>
                 <div style={{ fontSize: 13.5 }}>{detail.description}</div>
               </div>
             )}
             {detail.extra && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 6 }}>Qo'shimcha ma'lumot</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginBottom: 6 }}>{t('audit_detail_extra')}</div>
                 <pre style={{ fontSize: 12, background: 'var(--bg)', padding: 10, borderRadius: 8, overflowX: 'auto', margin: 0 }}>{typeof detail.extra === 'string' ? detail.extra : JSON.stringify(detail.extra, null, 2)}</pre>
               </div>
             )}

@@ -3,28 +3,29 @@ import React from 'react';
 import { Icon } from './icons';
 import { AlphaShield, AlphaWordmark } from './logo';
 import { apiSearchStudents } from './api';
+import { useT } from './lang';
 
 const NAV_ITEMS = [
-  { section: 'Asosiy', items: [
-    { id: 'dashboard', label: 'Bosh sahifa', icon: 'Dashboard', perm: 'reports:dashboard:view' },
+  { sectionKey: 'nav_main', items: [
+    { id: 'dashboard', labelKey: 'nav_dashboard', icon: 'Dashboard', perm: 'reports:dashboard:view' },
   ]},
-  { section: "O'quv jarayoni", items: [
-    { id: 'students', label: "O'quvchilar", icon: 'Users', perm: 'students:view' },
-    { id: 'groups', label: 'Guruhlar', icon: 'Group', perm: 'groups:view' },
-    { id: 'sessions', label: 'Trening sessiyalari', icon: 'Calendar', perm: 'attendance:view' },
-    { id: 'performance', label: 'Natijaviy jadval', icon: 'Trophy', perm: 'sessions:manage' },
+  { sectionKey: 'nav_study', items: [
+    { id: 'students', labelKey: 'nav_students', icon: 'Users', perm: 'students:view' },
+    { id: 'groups', labelKey: 'nav_groups', icon: 'Group', perm: 'groups:view' },
+    { id: 'sessions', labelKey: 'nav_sessions', icon: 'Calendar', perm: 'attendance:view' },
+    { id: 'performance', labelKey: 'nav_performance', icon: 'Trophy', perm: 'sessions:manage' },
   ]},
-  { section: 'Hujjat va moliya', items: [
-    { id: 'contracts', label: 'Shartnomalar', icon: 'FileText', perm: 'contracts:view' },
-    { id: 'transactions', label: 'Tranzaksiyalar', icon: 'Wallet', perm: 'finance:transactions:view' },
-    { id: 'reports', label: 'Hisobotlar', icon: 'Activity', perm: 'finance:transactions:view' },
-    // { id: 'gate', label: 'Darvoza loglari', icon: 'Gate', perm: 'gate:logs:view' },
+  { sectionKey: 'nav_docs_finance', items: [
+    { id: 'contracts', labelKey: 'nav_contracts', icon: 'FileText', perm: 'contracts:view' },
+    { id: 'transactions', labelKey: 'nav_transactions', icon: 'Wallet', perm: 'finance:transactions:view' },
+    { id: 'reports', labelKey: 'nav_reports', icon: 'Activity', perm: 'finance:transactions:view' },
+    // { id: 'gate', labelKey: 'gate_title', icon: 'Gate', perm: 'gate:logs:view' },
   ]},
-  { section: 'Boshqaruv', items: [
-    { id: 'waiting-list', label: "Kutish ro'yxati", icon: 'Bell', perm: 'students:view' },
-    { id: 'users', label: 'Foydalanuvchilar', icon: 'Users', perm: 'users:manage' },
-    { id: 'audit-logs', label: 'Audit log', icon: 'Shield', perm: 'settings:system:view' },
-    { id: 'settings', label: 'Sozlamalar', icon: 'Settings', perm: 'settings:system:view' },
+  { sectionKey: 'nav_management', items: [
+    { id: 'waiting-list', labelKey: 'nav_waiting_list', icon: 'Bell', perm: 'students:view' },
+    { id: 'users', labelKey: 'nav_users', icon: 'Users', perm: 'users:manage' },
+    { id: 'audit-logs', labelKey: 'nav_audit_logs', icon: 'Shield', perm: 'settings:system:view' },
+    { id: 'settings', labelKey: 'nav_settings', icon: 'Settings', perm: 'settings:system:view' },
   ]},
 ];
 
@@ -55,19 +56,19 @@ function getInitials(name) {
 
 export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
   const I = Icon;
+  const { t } = useT();
   const fullName = user?.full_name || user?.name || user?.email || 'Alpha User';
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         {!collapsed ? <AlphaWordmark height={30}/> : <AlphaShield size={30}/>}
         <button className="icon-btn" style={{ marginLeft: 'auto', width: 32, height: 32, border: 'none', background: 'transparent' }}
-          onClick={onToggle} title={collapsed ? 'Yoyish' : 'Yigʼish'}>
+          onClick={onToggle}>
           <I.Menu size={16}/>
         </button>
       </div>
       <nav className="nav">
         {(() => {
-          // Render NAV_ITEMS but skip duplicate target ids (show only first occurrence)
           const seen = new Set();
           return NAV_ITEMS.map(section => {
             const visible = section.items.filter(it => {
@@ -78,18 +79,19 @@ export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
             });
             if (!visible.length) return null;
             return (
-              <React.Fragment key={section.section}>
-                {!collapsed && <div className="nav-section">{section.section}</div>}
+              <React.Fragment key={section.sectionKey}>
+                {!collapsed && <div className="nav-section">{t(section.sectionKey)}</div>}
                 {visible.map(it => {
                   const Ic = I[it.icon];
+                  const label = t(it.labelKey);
                   return (
                     <div key={it.id}
                       className={'nav-item' + (active === it.id ? ' active' : '')}
                       onClick={() => onNav(it.id)}
-                      title={collapsed ? it.label : ''}>
+                      title={collapsed ? label : ''}>
                       <Ic size={17}/>
                       {!collapsed && <>
-                        <span>{it.label}</span>
+                        <span>{label}</span>
                         {it.badge && <span className="nav-badge">{it.badge}</span>}
                       </>}
                     </div>
@@ -117,6 +119,7 @@ export function Sidebar({ active, onNav, role, collapsed, onToggle, user }) {
 
 export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onTheme, onSignOut, user, onNavigate }) {
   const I = Icon;
+  const { t, lang, setLang } = useT();
   const [open, setOpen] = React.useState(false);
   const [searchQ, setSearchQ] = React.useState('');
   const [searchResults, setSearchResults] = React.useState([]);
@@ -159,7 +162,7 @@ export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onThe
       <div className="search" ref={searchRef} style={{ position: 'relative' }}>
         <span className="icon-l"><I.Search size={16}/></span>
         <input
-          placeholder="O'quvchi, guruh yoki shartnoma izlash..."
+          placeholder={t('topbar_search')}
           value={searchQ}
           onChange={e => { setSearchQ(e.target.value); if (!e.target.value) setSearchOpen(false); }}
           onFocus={() => { if (searchQ.trim() && searchResults.length > 0) setSearchOpen(true); }}
@@ -169,10 +172,10 @@ export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onThe
         {searchOpen && (
           <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 30px rgba(0,0,0,0.14)', zIndex: 200, overflow: 'hidden' }}>
             {searchLoading && (
-              <div style={{ padding: '10px 14px', fontSize: 13, color: 'var(--muted)' }}>Qidirilmoqda...</div>
+              <div style={{ padding: '10px 14px', fontSize: 13, color: 'var(--muted)' }}>{t('topbar_searching')}</div>
             )}
             {!searchLoading && searchResults.length === 0 && (
-              <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>Natija topilmadi</div>
+              <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>{t('topbar_no_results')}</div>
             )}
             {searchResults.map(s => (
               <div key={s.id}
@@ -195,7 +198,14 @@ export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onThe
         )}
       </div>
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button className="icon-btn" onClick={() => onTheme(theme === 'dark' ? 'light' : 'dark')} title="Tema">
+        <button
+          onClick={() => setLang(lang === 'ru' ? 'uz' : 'ru')}
+          style={{ height: 32, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4 }}
+          title={lang === 'ru' ? "O'zbek tiliga o'tish" : 'Переключить на русский'}
+        >
+          {lang === 'ru' ? t('lang_uz') : t('lang_ru')}
+        </button>
+        <button className="icon-btn" onClick={() => onTheme(theme === 'dark' ? 'light' : 'dark')} title={lang === 'ru' ? 'Тема' : 'Tema'}>
           {theme === 'dark' ? <I.Sun size={16}/> : <I.Moon size={16}/>}
         </button>
         <div style={{ position: 'relative' }}>
@@ -214,7 +224,7 @@ export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onThe
               borderRadius: 10, boxShadow: 'var(--shadow-lg)', zIndex: 50, padding: 6,
             }} onMouseLeave={() => setOpen(false)}>
               {canSwitchRole && <>
-                <div style={{ padding: '10px 12px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rolga o'tish</div>
+                <div style={{ padding: '10px 12px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('topbar_switch_role')}</div>
                 {Object.keys(ROLE_PERMISSIONS).map(r => (
                   <div key={r}
                     onClick={() => { onRoleSwitch(r); setOpen(false); }}
@@ -232,7 +242,7 @@ export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onThe
                 <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }}></div>
               </>}
               <div onClick={onSignOut} style={{ padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--brand-red)' }}>
-                <Icon.Logout size={14}/> Chiqish
+                <Icon.Logout size={14}/> {t('topbar_logout')}
               </div>
             </div>
           )}

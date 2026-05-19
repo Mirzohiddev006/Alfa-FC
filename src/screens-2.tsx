@@ -11,6 +11,7 @@ import {
   apiContractPdfUrl, apiGetContractPdf, apiDownloadStudentFile,
 } from './api';
 import { SearchableGroupSelect } from './components';
+import { useT } from './lang';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
 function avatarColor(id) { return AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length]; }
@@ -29,6 +30,7 @@ function fullName(s) { return `${s.first_name} ${s.last_name}`; }
 
 export function StudentsList({ onOpen, onNew, onToast }) {
   const I = Icon;
+  const { t } = useT();
   const [students, setStudents] = React.useState([]);
   const [groups, setGroups] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -87,29 +89,29 @@ export function StudentsList({ onOpen, onNew, onToast }) {
   const allSelected = students.length > 0 && students.every(s => selected.includes(s.id));
 
   async function handleDeleteStudent(id) {
-    if (!confirm("O'quvchini o'chirasizmi? (status DELETED ga o'zgaradi)")) return;
+    if (!confirm(t('confirm_delete_student'))) return;
     try {
       await apiDeleteStudent(id);
       setSelected(prev => prev.filter(x => x !== id));
       setOpenMenuStudentId(null);
-      onToast?.("O'quvchi o'chirildi");
+      onToast?.(t('toast_student_deleted'));
       loadStudents();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     }
   }
 
   async function handleBulkDelete() {
     if (selected.length === 0) return;
-    if (!confirm(`${selected.length} ta o'quvchini o'chirasizmi?`)) return;
+    if (!confirm(`${selected.length} ${t('confirm_delete_students')}`)) return;
     setBulkDeleting(true);
     try {
       await apiDeleteStudentsBulk(selected);
       setSelected([]);
-      onToast?.(`${selected.length} ta o'quvchi o'chirildi`);
+      onToast?.(`${selected.length} ${t('toast_students_deleted')}`);
       loadStudents();
     } catch (e) {
-      onToast?.('Xatolik: ' + e.message);
+      onToast?.(e.message);
     } finally {
       setBulkDeleting(false);
     }
@@ -131,23 +133,23 @@ export function StudentsList({ onOpen, onNew, onToast }) {
     }
   }
 
-  if (loading && students.length === 0) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
+  if (loading && students.length === 0) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
 
   return (
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">O'quvchilar</h1>
-          <div className="page-sub">Akademiyaning barcha o'quvchilari · jami {totalCount} ta</div>
+          <h1 className="page-title">{t('students_title')}</h1>
+          <div className="page-sub">{t('students_sub')} {totalCount} {t('students_count')}</div>
         </div>
         <div className="page-actions">
           {selected.length > 0 && (
             <button className="btn danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
-              <I.Trash2 size={14}/> {bulkDeleting ? "O'chirilmoqda..." : `${selected.length} ta o'chirish`}
+              <I.Trash2 size={14}/> {bulkDeleting ? t('deleting') : `${selected.length} ${t('delete')}`}
             </button>
           )}
-          <button className="btn" onClick={handleExport}><I.Download size={15}/> Excel export</button>
-          <button className="btn primary" onClick={onNew}><I.UserPlus size={15}/> Yangi o'quvchi</button>
+          <button className="btn" onClick={handleExport}><I.Download size={15}/> {t('students_excel_export')}</button>
+          <button className="btn primary" onClick={onNew}><I.UserPlus size={15}/> {t('students_new')}</button>
         </div>
       </div>
 
@@ -155,19 +157,19 @@ export function StudentsList({ onOpen, onNew, onToast }) {
         <div className="table-toolbar">
           <div className="search" style={{ maxWidth: 320 }}>
             <span className="icon-l"><I.Search size={15}/></span>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ism, telefon, PNFL yoki manzil..."/>
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('students_search')}/>
           </div>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            <option value="all">Barcha statuslar</option>
-            <option value="active">Faol</option>
-            <option value="inactive">Nofaol</option>
-            <option value="archived">Arxiv</option>
+            <option value="all">{t('students_all_statuses')}</option>
+            <option value="active">{t('status_active')}</option>
+            <option value="inactive">{t('status_inactive')}</option>
+            <option value="archived">{t('status_archived')}</option>
           </select>
-          <SearchableGroupSelect value={groupId} onChange={v => { setGroupId(v === 'all' ? '' : v); setPage(1); }} groups={groups} />
+          <SearchableGroupSelect value={groupId} onChange={v => { setGroupId(v === 'all' ? '' : v); setPage(1); }} groups={groups} placeholder={t('students_all_groups')} />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 12.5 }}>
-            {selected.length > 0 && <span style={{ color: 'var(--text)', fontWeight: 600 }}>{selected.length} tanlangan</span>}
-            {loading && <span>Yuklanmoqda...</span>}
-            <span>{totalCount} natija</span>
+            {selected.length > 0 && <span style={{ color: 'var(--text)', fontWeight: 600 }}>{selected.length} {t('students_selected')}</span>}
+            {loading && <span>{t('loading')}</span>}
+            <span>{totalCount} {t('students_results')}</span>
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
@@ -177,17 +179,17 @@ export function StudentsList({ onOpen, onNew, onToast }) {
                 <th style={{ width: 36, paddingRight: 0 }}>
                   <input type="checkbox" checked={allSelected} onChange={e => setSelected(e.target.checked ? students.map(s => s.id) : [])}/>
                 </th>
-                <th>Ism Familiya</th>
-                <th>Guruh</th>
-                <th>Tug'ilgan</th>
-                <th>Telefon</th>
-                <th>Status</th>
+                <th>{t('students_col_name')}</th>
+                <th>{t('students_col_group')}</th>
+                <th>{t('students_col_birth')}</th>
+                <th>{t('students_col_phone')}</th>
+                <th>{t('students_col_status')}</th>
                 <th style={{ width: 40 }}></th>
               </tr>
             </thead>
             <tbody>
               {students.length === 0 && !loading && (
-                <tr><td colSpan={7} style={{ padding: 24, color: 'var(--muted)', textAlign: 'center' }}>O'quvchi topilmadi</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, color: 'var(--muted)', textAlign: 'center' }}>{t('students_not_found')}</td></tr>
               )}
               {students.map(s => {
                 const name = fullName(s);
@@ -203,7 +205,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
                         <div className="avatar sm" style={{ background: avatarColor(s.id) }}>{s.first_name[0]}{s.last_name[0]}</div>
                         <div className="meta">
                           <span className="name">{name}</span>
-                          <span className="sub">#{String(s.id).padStart(4, '0')} · {age} yosh</span>
+                          <span className="sub">#{String(s.id).padStart(4, '0')} · {age} {t('students_years')}</span>
                         </div>
                       </div>
                     </td>
@@ -211,9 +213,9 @@ export function StudentsList({ onOpen, onNew, onToast }) {
                     <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-2)' }}>{s.date_of_birth}</td>
                     <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-2)' }}>{s.phone || '—'}</td>
                     <td>
-                      {s.status === 'active' && <span className="chip success"><span className="chip-dot"></span>Faol</span>}
-                      {s.status === 'inactive' && <span className="chip warning"><span className="chip-dot"></span>Nofaol</span>}
-                      {s.status === 'archived' && <span className="chip"><span className="chip-dot"></span>Arxiv</span>}
+                      {s.status === 'active' && <span className="chip success"><span className="chip-dot"></span>{t('status_active')}</span>}
+                      {s.status === 'inactive' && <span className="chip warning"><span className="chip-dot"></span>{t('status_inactive')}</span>}
+                      {s.status === 'archived' && <span className="chip"><span className="chip-dot"></span>{t('status_archived')}</span>}
                     </td>
                     <td onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
                       <button className="icon-btn" style={{ width: 32, height: 32, border: 'none', background: 'transparent' }} onClick={(e) => {
@@ -229,10 +231,10 @@ export function StudentsList({ onOpen, onNew, onToast }) {
                       {openMenuStudentId === s.id && (
                         <div style={{ position: 'fixed', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', zIndex: 9999, minWidth: 160, top: menuPos.y, left: menuPos.x }} onClick={e => e.stopPropagation()}>
                           <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }} onClick={() => { onOpen(s.id); setOpenMenuStudentId(null); }}>
-                            <I.Eye size={14} /> Ochish
+                            <I.Eye size={14} /> {t('open')}
                           </button>
                           <button style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-red)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => handleDeleteStudent(s.id)}>
-                            <I.Trash2 size={14} /> O'chirish
+                            <I.Trash2 size={14} /> {t('delete')}
                           </button>
                         </div>
                       )}
@@ -267,6 +269,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
 
 export function StudentProfile({ studentId, onBack }) {
   const I = Icon;
+  const { t } = useT();
   const [info, setInfo] = React.useState(null);
   const [transactions, setTransactions] = React.useState([]);
   const [gateLogs, setGateLogs] = React.useState([]);
@@ -313,8 +316,8 @@ export function StudentProfile({ studentId, onBack }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [studentId]);
 
-  if (loading) return <div className="empty" style={{ padding: 48 }}>Yuklanmoqda...</div>;
-  if (!info) return <div className="empty" style={{ padding: 48 }}>O'quvchi topilmadi</div>;
+  if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
+  if (!info) return <div className="empty" style={{ padding: 48 }}>{t('students_not_found')}</div>;
 
   const s = info.student;
   const group = info.group;
@@ -330,7 +333,7 @@ export function StudentProfile({ studentId, onBack }) {
 
   return (
     <div>
-      <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14}/> O'quvchilar ro'yxati</button>
+      <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14}/> {t('profile_back')}</button>
 
       <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
         <div style={{
@@ -351,23 +354,23 @@ export function StudentProfile({ studentId, onBack }) {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-                  {s.status === 'active' && <span className="chip success" style={{ background: 'rgba(30, 138, 92, 0.15)', color: 'white', borderColor: 'rgba(255,255,255,0.12)' }}><span className="chip-dot" style={{ background: '#7EE2B8' }}></span>Faol o'quvchi</span>}
+                  {s.status === 'active' && <span className="chip success" style={{ background: 'rgba(30, 138, 92, 0.15)', color: 'white', borderColor: 'rgba(255,255,255,0.12)' }}><span className="chip-dot" style={{ background: '#7EE2B8' }}></span>{t('profile_active_student')}</span>}
                   {attendances.length > 0 && (
-                    <span className="chip navy" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', borderColor: 'rgba(255,255,255,0.12)' }}>Davomat {Math.round((presentCount / attendances.length) * 100)}%</span>
+                    <span className="chip navy" style={{ background: 'rgba(255,255,255,0.12)', color: 'white', borderColor: 'rgba(255,255,255,0.12)' }}>{t('profile_attendance_label')} {Math.round((presentCount / attendances.length) * 100)}%</span>
                   )}
                 </div>
                 <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: '-0.01em', color: 'white', lineHeight: 1.15 }}>{name}</h1>
                 <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.78)', flexWrap: 'wrap' }}>
-                  <span>{age} yosh ({s.date_of_birth})</span>
+                  <span>{age} {t('students_years')} ({s.date_of_birth})</span>
                   {group && <><span>·</span><span>{group.name}</span></>}
-                  {coach && <><span>·</span><span>Murabbiy: {coach.full_name}</span></>}
+                  {coach && <><span>·</span><span>{t('profile_coach')}: {coach.full_name}</span></>}
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button className="btn sm" onClick={() => setShowEditModal(true)}><I.Edit size={13}/> Tahrirlash</button>
-              {contract && <button className="btn sm" onClick={() => setTab('contract')}><I.FileText size={13}/> Shartnoma</button>}
+              <button className="btn sm" onClick={() => setShowEditModal(true)}><I.Edit size={13}/> {t('edit')}</button>
+              {contract && <button className="btn sm" onClick={() => setTab('contract')}><I.FileText size={13}/> {t('profile_contract')}</button>}
             </div>
           </div>
         </div>
@@ -376,15 +379,15 @@ export function StudentProfile({ studentId, onBack }) {
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="tabs">
           {[
-            { id: 'overview', label: 'Umumiy' },
-            { id: 'attendance', label: 'Davomat' },
-            { id: 'contract', label: 'Shartnoma' },
-            { id: 'transactions', label: "To'lovlar" },
-            { id: 'gatelogs', label: 'Darvoza' },
-            { id: 'files', label: 'Fayllar' },
-          ].map(t => (
-            <div key={t.id} className={'tab' + (tab === t.id ? ' active' : '')} onClick={() => setTab(t.id)}>
-              {t.label}
+            { id: 'overview', labelKey: 'profile_overview' },
+            { id: 'attendance', labelKey: 'profile_attendance' },
+            { id: 'contract', labelKey: 'profile_contract' },
+            { id: 'transactions', labelKey: 'profile_payments' },
+            { id: 'gatelogs', labelKey: 'profile_gate' },
+            { id: 'files', labelKey: 'profile_files' },
+          ].map(tb => (
+            <div key={tb.id} className={'tab' + (tab === tb.id ? ' active' : '')} onClick={() => setTab(tb.id)}>
+              {t(tb.labelKey)}
             </div>
           ))}
         </div>
@@ -392,17 +395,17 @@ export function StudentProfile({ studentId, onBack }) {
         {tab === 'overview' && (
           <div style={{ padding: 22, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 22 }}>
             <div>
-              <div className="card-title" style={{ marginBottom: 14 }}>Shaxsiy ma'lumotlar</div>
+              <div className="card-title" style={{ marginBottom: 14 }}>{t('profile_personal')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                 {[
-                  ['Tug\'ilgan sana', s.date_of_birth],
-                  ['Millati', s.millati || '—'],
-                  ['Qon guruhi', s.ampula || '—'],
-                  ["Bo'yi / vazni", `${s.height} sm · ${s.weight} kg`],
-                  ['PNFL', s.pnfl],
-                  ['Telefon', s.phone || '—'],
-                  ['Manzil', s.address || '—'],
-                  ["Qo'shilgan", s.created_at ? s.created_at.slice(0, 10) : '—'],
+                  [t('profile_dob'), s.date_of_birth],
+                  [t('profile_nationality'), s.millati || '—'],
+                  [t('profile_blood'), s.ampula || '—'],
+                  [t('profile_height_weight'), `${s.height} sm · ${s.weight} kg`],
+                  [t('profile_pnfl'), s.pnfl],
+                  [t('profile_phone'), s.phone || '—'],
+                  [t('profile_address'), s.address || '—'],
+                  [t('profile_joined'), s.created_at ? s.created_at.slice(0, 10) : '—'],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{k}</div>
@@ -412,14 +415,14 @@ export function StudentProfile({ studentId, onBack }) {
               </div>
               {contract?.custom_fields?.customer && (
                 <div style={{ marginTop: 22 }}>
-                  <div className="card-title" style={{ marginBottom: 14 }}>Mijoz (ota-ona)</div>
+                  <div className="card-title" style={{ marginBottom: 14 }}>{t('profile_parent')}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                     {[
-                      ["To'liq ismi", contract.custom_fields.customer.full_name || '—'],
-                      ['Pasport', contract.custom_fields.customer.passport_number || '—'],
-                      ['Manzil', contract.custom_fields.customer.address || '—'],
-                    ].map(([k, v]) => (
-                      <div key={k} style={k === 'Manzil' ? { gridColumn: 'span 2' } : {}}>
+                      [t('profile_col_fullname') || 'To\'liq ismi', contract.custom_fields.customer.full_name || '—', false],
+                      [t('profile_upload_passport'), contract.custom_fields.customer.passport_number || '—', false],
+                      [t('profile_address'), contract.custom_fields.customer.address || '—', true],
+                    ].map(([k, v, span2]) => (
+                      <div key={k} style={span2 ? { gridColumn: 'span 2' } : {}}>
                         <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{k}</div>
                         <div style={{ fontSize: 13.5, color: 'var(--text)' }}>{v}</div>
                       </div>
@@ -429,13 +432,13 @@ export function StudentProfile({ studentId, onBack }) {
               )}
             </div>
             <div>
-              <div className="card-title" style={{ marginBottom: 14 }}>Tezkor statistika</div>
+              <div className="card-title" style={{ marginBottom: 14 }}>{t('profile_stats')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { l: 'Jami trening', v: String(attendances.length), sub: 'shu mavsumda' },
-                  { l: 'Kelgan / Kelmagan', v: `${presentCount}/${absentCount}`, sub: 'davomat' },
-                  { l: 'Kechikishlar', v: String(lateCount), sub: "so'nggi qaydlar" },
-                  { l: "Joriy oy to'lovi", v: contract ? `${contract.monthly_fee.toLocaleString()} so'm` : '—', sub: "shartnoma" },
+                  { l: t('profile_total_trainings'), v: String(attendances.length), sub: t('profile_this_season') },
+                  { l: t('profile_present_absent'), v: `${presentCount}/${absentCount}`, sub: t('profile_attendance_label') },
+                  { l: t('profile_late'), v: String(lateCount), sub: t('profile_last_records') },
+                  { l: t('profile_monthly_fee'), v: contract ? `${contract.monthly_fee.toLocaleString()} so'm` : '—', sub: t('profile_contract_label') },
                 ].map(it => (
                   <div key={it.l} style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -448,7 +451,7 @@ export function StudentProfile({ studentId, onBack }) {
                 {attendanceReport && (
                   <div style={{ padding: 12, background: 'rgba(15,31,77,0.08)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>Rasmiy hisobot</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{t('profile_official_report')}</div>
                       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>attendance/students/{studentId}</div>
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'right' }}>
@@ -466,8 +469,8 @@ export function StudentProfile({ studentId, onBack }) {
 
         {tab === 'attendance' && (
           <div style={{ padding: 22 }}>
-            <div className="card-title" style={{ marginBottom: 14 }}>So'nggi {Math.min(attendances.length, 14)} trening</div>
-            {attendances.length === 0 && <div className="empty">Hech qanday davomat qayd etilmagan</div>}
+            <div className="card-title" style={{ marginBottom: 14 }}>{t('profile_last_trainings')} {Math.min(attendances.length, 14)} {t('profile_last_trainings_suffix')}</div>
+            {attendances.length === 0 && <div className="empty">{t('profile_no_attendance')}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, 1fr)', gap: 6 }}>
               {attendances.slice(0, 14).map((a, i) => {
                 const color = a.status === 'present' ? 'var(--success)' : a.status === 'absent' ? 'var(--brand-red)' : 'var(--brand-gold)';
@@ -480,9 +483,9 @@ export function StudentProfile({ studentId, onBack }) {
               })}
             </div>
             <div style={{ display: 'flex', gap: 18, marginTop: 16, fontSize: 12.5 }}>
-              <span style={{ color: 'var(--success)', fontWeight: 600 }}>● Kelgan {presentCount}</span>
-              <span style={{ color: 'var(--brand-gold)', fontWeight: 600 }}>● Kechikkan {lateCount}</span>
-              <span style={{ color: 'var(--brand-red)', fontWeight: 600 }}>● Kelmagan {absentCount}</span>
+              <span style={{ color: 'var(--success)', fontWeight: 600 }}>● {t('profile_present')} {presentCount}</span>
+              <span style={{ color: 'var(--brand-gold)', fontWeight: 600 }}>● {t('profile_late_chip')} {lateCount}</span>
+              <span style={{ color: 'var(--brand-red)', fontWeight: 600 }}>● {t('profile_absent')} {absentCount}</span>
             </div>
           </div>
         )}
@@ -490,16 +493,16 @@ export function StudentProfile({ studentId, onBack }) {
         {tab === 'contract' && (
           <div style={{ padding: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <div>
-              <div className="card-title" style={{ marginBottom: 14 }}>Joriy shartnoma</div>
-              {!contract && <div className="empty">Shartnoma topilmadi</div>}
+              <div className="card-title" style={{ marginBottom: 14 }}>{t('profile_current_contract')}</div>
+              {!contract && <div className="empty">{t('profile_contract_not_found')}</div>}
               {contract && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
-                    ['Raqami', contract.contract_number],
-                    ['Status', <span className="chip success" key="s"><span className="chip-dot"></span>Faol</span>],
-                    ['Boshlanishi', contract.start_date || '—'],
-                    ['Tugashi', contract.end_date || '—'],
-                    ["Oylik to'lov", `${contract.monthly_fee.toLocaleString()} so'm`],
+                    [t('contracts_number'), contract.contract_number],
+                    [t('contracts_status'), <span className="chip success" key="s"><span className="chip-dot"></span>{t('status_active')}</span>],
+                    [t('contracts_start_date'), contract.start_date || '—'],
+                    [t('contracts_end_date'), contract.end_date || '—'],
+                    [t('contracts_monthly_fee'), `${contract.monthly_fee.toLocaleString()} so'm`],
                   ].map(([k, v], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                       <span style={{ color: 'var(--muted)', fontSize: 13 }}>{k}</span>
@@ -528,21 +531,21 @@ export function StudentProfile({ studentId, onBack }) {
                       setPdfDownloading(false);
                     }
                   }}>
-                    <I.Download size={14}/> {pdfDownloading ? 'Yuklanmoqda...' : 'PDF yuklab olish'}
+                    <I.Download size={14}/> {pdfDownloading ? t('loading') : 'PDF ' + t('download')}
                   </button>
                 )}
               </div>
             </div>
             <div>
-              <div className="card-title" style={{ marginBottom: 14 }}>Mijoz (ota-ona)</div>
+              <div className="card-title" style={{ marginBottom: 14 }}>{t('profile_parent')}</div>
               <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: 14, fontSize: 13.5 }}>
                 {contract?.custom_fields?.customer ? (
                   <>
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>{contract.custom_fields.customer.full_name || '—'}</div>
-                    <div style={{ color: 'var(--muted)', marginBottom: 8 }}>Pasport: {contract.custom_fields.customer.passport_number || '—'}</div>
+                    <div style={{ color: 'var(--muted)', marginBottom: 8 }}>{t('profile_upload_passport')}: {contract.custom_fields.customer.passport_number || '—'}</div>
                     <div style={{ color: 'var(--muted)' }}>{contract.custom_fields.customer.address || '—'}</div>
                   </>
-                ) : <div className="empty">Ma'lumot yo'q</div>}
+                ) : <div className="empty">{t('not_found')}</div>}
               </div>
             </div>
           </div>
@@ -550,11 +553,11 @@ export function StudentProfile({ studentId, onBack }) {
 
         {tab === 'transactions' && (
           <div style={{ padding: 22 }}>
-            {transactions.length === 0 && <div className="empty">To'lovlar topilmadi</div>}
+            {transactions.length === 0 && <div className="empty">{t('profile_no_payments')}</div>}
             {transactions.length > 0 && (
               <table className="table" style={{ border: '1px solid var(--border)', borderRadius: 8 }}>
                 <thead>
-                  <tr><th>Sana va vaqt</th><th>Manba</th><th>Oylar</th><th style={{ textAlign: 'right' }}>Summa</th><th>Status</th></tr>
+                  <tr><th>{t('profile_tx_date_time')}</th><th>{t('profile_tx_source')}</th><th>Oylar</th><th style={{ textAlign: 'right' }}>{t('profile_tx_amount')}</th><th>{t('profile_tx_status')}</th></tr>
                 </thead>
                 <tbody>
                   {transactions.slice(0, 10).map(tx => (
@@ -564,9 +567,9 @@ export function StudentProfile({ studentId, onBack }) {
                       <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{tx.payment_months?.join(', ') || '—'}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{tx.amount.toLocaleString()} so'm</td>
                       <td>
-                        {tx.status === 'SETTLED' && <span className="chip success"><span className="chip-dot"></span>To'langan</span>}
-                        {tx.status === 'UNASSIGNED' && <span className="chip warning"><span className="chip-dot"></span>Biriktirilmagan</span>}
-                        {tx.status === 'CANCELLED' && <span className="chip"><span className="chip-dot"></span>Bekor</span>}
+                        {tx.status === 'SETTLED' && <span className="chip success"><span className="chip-dot"></span>{t('tx_st_success')}</span>}
+                        {tx.status === 'UNASSIGNED' && <span className="chip warning"><span className="chip-dot"></span>{t('tx_scope_unassigned')}</span>}
+                        {tx.status === 'CANCELLED' && <span className="chip"><span className="chip-dot"></span>{t('tx_st_cancelled')}</span>}
                       </td>
                     </tr>
                   ))}
@@ -578,7 +581,7 @@ export function StudentProfile({ studentId, onBack }) {
 
         {tab === 'gatelogs' && (
           <div style={{ padding: 22 }}>
-            {gateLogs.length === 0 && <div className="empty">Hech qanday log topilmadi</div>}
+            {gateLogs.length === 0 && <div className="empty">{t('profile_no_gate')}</div>}
             {gateLogs.slice(0, 30).map(log => (
               <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -587,7 +590,7 @@ export function StudentProfile({ studentId, onBack }) {
                   {log.allowed ? <I.Check size={15}/> : <I.X size={15}/>}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>{log.allowed ? 'Ruxsat berildi' : 'Rad etildi'}</div>
+                  <div style={{ fontWeight: 600 }}>{log.allowed ? t('profile_gate_entry') : t('profile_gate_exit')}</div>
                   {log.reason && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{log.reason}</div>}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
@@ -601,9 +604,9 @@ export function StudentProfile({ studentId, onBack }) {
         {tab === 'files' && (
           <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
-              { name: 'Profil rasmi', urlKey: 'photo_url', icon: 'Camera', apiKey: 'photo', accept: 'image/*', uploadFn: apiUploadStudentPhoto },
-              { name: 'Pasport nusxasi', urlKey: 'passport_url', icon: 'File', apiKey: 'passport', accept: 'image/*,.pdf', uploadFn: apiUploadStudentPassport },
-              { name: "Qo'shimcha fayl", urlKey: 'extra_file_url', icon: 'FileText', apiKey: 'extra_file', accept: '*', uploadFn: apiUploadStudentExtraFile },
+              { name: t('file_photo_label'), urlKey: 'photo_url', icon: 'Camera', apiKey: 'photo', accept: 'image/*', uploadFn: apiUploadStudentPhoto },
+              { name: t('file_passport_label'), urlKey: 'passport_url', icon: 'File', apiKey: 'passport', accept: 'image/*,.pdf', uploadFn: apiUploadStudentPassport },
+              { name: t('file_extra_label'), urlKey: 'extra_file_url', icon: 'FileText', apiKey: 'extra_file', accept: '*', uploadFn: apiUploadStudentExtraFile },
             ].map((f) => {
               const Ic = I[f.icon];
               const url = s[f.urlKey];
@@ -616,10 +619,10 @@ export function StudentProfile({ studentId, onBack }) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{f.name}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{url ? 'Mavjud' : "Yo'q"}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{url ? t('file_available') : t('file_missing')}</div>
                     </div>
                     {url && (
-                      <button className="icon-btn" style={{ width: 30, height: 30 }} disabled={downloadingFile === f.apiKey} title="Yuklab olish"
+                      <button className="icon-btn" style={{ width: 30, height: 30 }} disabled={downloadingFile === f.apiKey} title={t('download_btn')}
                         onClick={async () => {
                           setDownloadingFile(f.apiKey);
                           try {
@@ -633,7 +636,7 @@ export function StudentProfile({ studentId, onBack }) {
                             document.body.removeChild(a);
                             URL.revokeObjectURL(dlUrl);
                           } catch (err) {
-                            alert('Yuklab bo\'lmadi: ' + err.message);
+                            alert(err.message);
                           } finally {
                             setDownloadingFile(null);
                           }
@@ -643,7 +646,7 @@ export function StudentProfile({ studentId, onBack }) {
                     )}
                   </div>
                   <label className="btn ghost sm" style={{ cursor: uploading ? 'not-allowed' : 'pointer', justifyContent: 'center', opacity: uploading ? 0.6 : 1 }}>
-                    {uploading ? 'Yuklanmoqda...' : <><I.Upload size={13}/> {url ? "Qayta yuklash" : "Yuklash"}</>}
+                    {uploading ? t('loading') : <><I.Upload size={13}/> {url ? t('reupload_btn') : t('upload_btn')}</>}
                     <input type="file" style={{ display: 'none' }} accept={f.accept} disabled={uploading} onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -655,7 +658,7 @@ export function StudentProfile({ studentId, onBack }) {
                         const infoRes = await apiGetStudentFullInfo(studentId);
                         setInfo(infoRes?.data || null);
                       } catch (err) {
-                        alert('Xatolik: ' + err.message);
+                        alert(err.message);
                       } finally {
                         setUploadingFile(null);
                         e.target.value = '';
@@ -679,18 +682,18 @@ export function StudentProfile({ studentId, onBack }) {
             background: 'var(--bg)', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
             maxWidth: 500, width: '100%', padding: 24, maxHeight: '90vh', overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>O'quvchini tahrirlash</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>{t('edit')} — {t('students_title')}</div>
             {editError && <div style={{ background: 'var(--brand-red-soft)', color: 'var(--brand-red)', padding: 12, borderRadius: 6, marginBottom: 14, fontSize: 13 }}>{editError}</div>}
             <div style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
               {[
-                ['Ism', 'first_name'],
-                ['Familiya', 'last_name'],
-                ['Tug\'ilgan sana', 'date_of_birth'],
-                ['Bo\'yi (cm)', 'height'],
-                ['Vazni (kg)', 'weight'],
-                ['PNFL', 'pnfl'],
-                ['Telefon', 'phone'],
-                ['Manzil', 'address'],
+                [t('student_new_first_name'), 'first_name'],
+                [t('student_new_last_name'), 'last_name'],
+                [t('profile_dob'), 'date_of_birth'],
+                [t('field_height'), 'height'],
+                [t('field_weight'), 'weight'],
+                [t('profile_pnfl'), 'pnfl'],
+                [t('profile_phone'), 'phone'],
+                [t('profile_address'), 'address'],
               ].map(([label, field]) => (
                 <div key={field}>
                   <label style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>{label}</label>
@@ -704,7 +707,7 @@ export function StudentProfile({ studentId, onBack }) {
                 </div>
               ))}
               <div>
-                <label style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>Qon guruhi</label>
+                <label style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>{t('profile_blood')}</label>
                 <select
                   value={editForm.ampula || 'O(+)'}
                   onChange={(e) => setEditForm(p => ({ ...p, ampula: e.target.value }))}
@@ -716,11 +719,11 @@ export function StudentProfile({ studentId, onBack }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn ghost" onClick={() => setShowEditModal(false)} disabled={editLoading}>Bekor</button>
+              <button className="btn ghost" onClick={() => setShowEditModal(false)} disabled={editLoading}>{t('cancel')}</button>
               <button className="btn primary" onClick={async () => {
                 setEditError('');
                 if (!editForm.first_name || !editForm.last_name || !editForm.date_of_birth || !editForm.pnfl) {
-                  setEditError('Ism, familiya, tug\'ilgan sana va PNFL majburiy');
+                  setEditError(t('required_student_fields'));
                   return;
                 }
                 setEditLoading(true);
@@ -748,11 +751,11 @@ export function StudentProfile({ studentId, onBack }) {
                   });
                   setLoading(false);
                 } catch (e) {
-                  setEditError(e.message || 'Xatolik yuz berdi');
+                  setEditError(e.message);
                 } finally {
                   setEditLoading(false);
                 }
-              }} disabled={editLoading}>{editLoading ? 'Saqlanamoqda...' : 'Saqlash'}</button>
+              }} disabled={editLoading}>{editLoading ? t('saving') : t('save')}</button>
             </div>
           </div>
         </div>
@@ -763,6 +766,7 @@ export function StudentProfile({ studentId, onBack }) {
 
 export function StudentNew({ onBack, onCreated, onViewContract }) {
   const I = Icon;
+  const { t } = useT();
   const [groups, setGroups] = React.useState([]);
   const [step, setStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
@@ -771,7 +775,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
   const [createdStudentId, setCreatedStudentId] = React.useState(null);
   const [createdContractId, setCreatedContractId] = React.useState(null);
   const [viewingContract, setViewingContract] = React.useState(false);
-  const steps = ["O'quvchi ma'lumotlari", 'Ota-ona va shartnoma', 'Fayllar va tasdiqlash'];
+  const steps = [t('step1_label'), t('step2_label'), t('step3_label')];
 
   const [form, setForm] = React.useState({
     first_name: '', last_name: '', date_of_birth: '', height: '', weight: '',
@@ -792,11 +796,11 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
   async function handleSubmit() {
     setError('');
     if (!form.first_name || !form.last_name || !form.date_of_birth || !form.pnfl) {
-      setError('Ism, familiya, tug\'ilgan sana va PNFL majburiy');
+      setError(t('required_student_fields'));
       return;
     }
     if (!form.customer_full_name || !form.monthly_fee_amount) {
-      setError('Mijoz ismi va oylik to\'lov majburiy');
+      setError(t('required_contract_fields'));
       return;
     }
     setSaving(true);
@@ -821,7 +825,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
         } catch { setCreatedContractId(null); }
       }
     } catch (e) {
-      setError(e.message || 'Xatolik yuz berdi');
+      setError(e.message);
     } finally {
       setSaving(false);
     }
@@ -829,11 +833,11 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
 
   return (
     <div>
-      <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14}/> Orqaga</button>
+      <button className="btn ghost sm" onClick={onBack} style={{ marginBottom: 14 }}><I.ArrowLeft size={14}/> {t('back_btn')}</button>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Yangi o'quvchi qo'shish</h1>
-          <div className="page-sub">O'quvchi va shartnoma bir vaqtda yaratiladi · POST /students</div>
+          <h1 className="page-title">{t('new_student_title')}</h1>
+          <div className="page-sub">{t('new_student_sub')} · POST /students</div>
         </div>
       </div>
 
@@ -848,7 +852,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
                 {done ? <I.Check size={14}/> : n}
               </div>
               <div>
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>Qadam {n}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>{t('step_label')} {n}</div>
                 <div style={{ fontSize: 13, fontWeight: active ? 600 : 500 }}>{label}</div>
               </div>
             </div>
@@ -860,42 +864,42 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
         <div className="card-body" style={{ padding: 24 }}>
           {step === 1 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-              <div className="field"><label>Ism <span className="req">*</span></label><input value={form.first_name} onChange={e => setF('first_name', e.target.value)} placeholder="Ali"/></div>
-              <div className="field"><label>Familiya <span className="req">*</span></label><input value={form.last_name} onChange={e => setF('last_name', e.target.value)} placeholder="Karimov"/></div>
-              <div className="field"><label>Tug'ilgan sana <span className="req">*</span></label><input type="date" value={form.date_of_birth} onChange={e => setF('date_of_birth', e.target.value)}/></div>
-              <div className="field"><label>Bo'yi (sm) <span className="req">*</span></label><input type="number" value={form.height} onChange={e => setF('height', e.target.value)} placeholder="140"/></div>
-              <div className="field"><label>Vazn (kg) <span className="req">*</span></label><input type="number" value={form.weight} onChange={e => setF('weight', e.target.value)} placeholder="35"/></div>
-              <div className="field"><label>PNFL <span className="req">*</span></label><input maxLength={14} value={form.pnfl} onChange={e => setF('pnfl', e.target.value)} placeholder="14 ta raqam"/></div>
-              <div className="field"><label>Telefon</label><input value={form.phone} onChange={e => setF('phone', e.target.value)} placeholder="+998 90 123 45 67"/></div>
-              <div className="field"><label>Qon guruhi</label>
+              <div className="field"><label>{t('field_first_name')} <span className="req">*</span></label><input value={form.first_name} onChange={e => setF('first_name', e.target.value)} placeholder="Ali"/></div>
+              <div className="field"><label>{t('field_last_name')} <span className="req">*</span></label><input value={form.last_name} onChange={e => setF('last_name', e.target.value)} placeholder="Karimov"/></div>
+              <div className="field"><label>{t('field_birth_date')} <span className="req">*</span></label><input type="date" value={form.date_of_birth} onChange={e => setF('date_of_birth', e.target.value)}/></div>
+              <div className="field"><label>{t('field_height')} <span className="req">*</span></label><input type="number" value={form.height} onChange={e => setF('height', e.target.value)} placeholder="140"/></div>
+              <div className="field"><label>{t('field_weight')} <span className="req">*</span></label><input type="number" value={form.weight} onChange={e => setF('weight', e.target.value)} placeholder="35"/></div>
+              <div className="field"><label>{t('field_pnfl')} <span className="req">*</span></label><input maxLength={14} value={form.pnfl} onChange={e => setF('pnfl', e.target.value)} placeholder="14 ta raqam"/></div>
+              <div className="field"><label>{t('field_phone')}</label><input value={form.phone} onChange={e => setF('phone', e.target.value)} placeholder="+998 90 123 45 67"/></div>
+              <div className="field"><label>{t('field_blood')}</label>
                 <select value={form.ampula} onChange={e => setF('ampula', e.target.value)}>
                   <option>O(+)</option><option>A(+)</option><option>B(+)</option><option>AB(+)</option>
                 </select>
               </div>
-              <div className="field"><label>Millati</label><input value={form.millati} onChange={e => setF('millati', e.target.value)} placeholder="O'zbek"/></div>
-              <div className="field" style={{ gridColumn: 'span 2' }}><label>Manzil</label><input value={form.address} onChange={e => setF('address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
-              <div className="field"><label>Guruh</label>
+              <div className="field"><label>{t('field_nationality')}</label><input value={form.millati} onChange={e => setF('millati', e.target.value)} placeholder="O'zbek"/></div>
+              <div className="field" style={{ gridColumn: 'span 2' }}><label>{t('field_address')}</label><input value={form.address} onChange={e => setF('address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
+              <div className="field"><label>{t('field_group2')}</label>
                 <SearchableGroupSelect value={form.group_id} onChange={v => setF('group_id', v)} groups={groups} placeholder="Tanlanmagan" />
               </div>
             </div>
           )}
           {step === 2 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div className="field" style={{ gridColumn: 'span 2' }}><label>Mijoz to'liq ismi (ota-ona) <span className="req">*</span></label><input value={form.customer_full_name} onChange={e => setF('customer_full_name', e.target.value)} placeholder="Karimov Ravshan Akmalovich"/></div>
-              <div className="field"><label>Pasport raqami</label><input value={form.customer_passport_number} onChange={e => setF('customer_passport_number', e.target.value)} placeholder="AB 1234567"/></div>
-              <div className="field"><label>Manzil</label><input value={form.customer_address} onChange={e => setF('customer_address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
-              <div className="field"><label>Oylik to'lov (so'm) <span className="req">*</span></label><input type="number" value={form.monthly_fee_amount} onChange={e => setF('monthly_fee_amount', e.target.value)} placeholder="500000"/></div>
-              <div className="field"><label>Forma to'lovi (so'm)</label><input type="number" value={form.uniform_fee_amount} onChange={e => setF('uniform_fee_amount', e.target.value)} placeholder="0"/></div>
-              <div className="field"><label>Shartnoma boshlanishi</label><input type="date" value={form.contract_start_date} onChange={e => setF('contract_start_date', e.target.value)}/></div>
-              <div className="field"><label>Shartnoma tugashi</label><input type="date" value={form.contract_end_date} onChange={e => setF('contract_end_date', e.target.value)}/></div>
+              <div className="field" style={{ gridColumn: 'span 2' }}><label>{t('field_customer_name')} <span className="req">*</span></label><input value={form.customer_full_name} onChange={e => setF('customer_full_name', e.target.value)} placeholder="Karimov Ravshan Akmalovich"/></div>
+              <div className="field"><label>{t('field_passport_num')}</label><input value={form.customer_passport_number} onChange={e => setF('customer_passport_number', e.target.value)} placeholder="AB 1234567"/></div>
+              <div className="field"><label>{t('field_address')}</label><input value={form.customer_address} onChange={e => setF('customer_address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
+              <div className="field"><label>{t('field_monthly_fee')} <span className="req">*</span></label><input type="number" value={form.monthly_fee_amount} onChange={e => setF('monthly_fee_amount', e.target.value)} placeholder="500000"/></div>
+              <div className="field"><label>{t('field_uniform_fee')}</label><input type="number" value={form.uniform_fee_amount} onChange={e => setF('uniform_fee_amount', e.target.value)} placeholder="0"/></div>
+              <div className="field"><label>{t('field_contract_start')}</label><input type="date" value={form.contract_start_date} onChange={e => setF('contract_start_date', e.target.value)}/></div>
+              <div className="field"><label>{t('field_contract_end')}</label><input type="date" value={form.contract_end_date} onChange={e => setF('contract_end_date', e.target.value)}/></div>
             </div>
           )}
           {step === 3 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
               {[
-                { key: 'photo', label: 'Profil rasmi', desc: 'JPG yoki PNG · 2 MB gacha', icon: 'Camera' },
-                { key: 'passport', label: 'Pasport nusxasi', desc: 'PDF yoki rasm', icon: 'File' },
-                { key: 'extra_file', label: "Qo'shimcha fayl", desc: 'Ixtiyoriy', icon: 'FileText' },
+                { key: 'photo', label: t('file_photo_label'), desc: t('file_photo_desc'), icon: 'Camera' },
+                { key: 'passport', label: t('file_passport_label'), desc: t('file_passport_desc'), icon: 'File' },
+                { key: 'extra_file', label: t('file_extra_label'), desc: t('file_extra_desc'), icon: 'FileText' },
               ].map(f => {
                 const Ic = I[f.icon];
                 return (
@@ -904,7 +908,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
                     <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{f.label}</div>
                     <div>{files[f.key] ? files[f.key].name : f.desc}</div>
                     <label className="btn sm" style={{ marginTop: 6, cursor: 'pointer' }}>
-                      <I.Upload size={13}/> Yuklash
+                      <I.Upload size={13}/> {t('upload_btn')}
                       <input type="file" style={{ display: 'none' }} onChange={e => setFiles(p => ({ ...p, [f.key]: e.target.files[0] || null }))}/>
                     </label>
                   </div>
@@ -913,8 +917,8 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
               <div style={{ gridColumn: 'span 3', padding: 14, background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12, fontSize: 13 }}>
                 <I.Check size={18}/>
                 <div>
-                  <div style={{ fontWeight: 600 }}>Tayyor</div>
-                  <div style={{ opacity: 0.85 }}>O'quvchi va shartnoma serverda yaratiladi, shartnoma PDFi avtomatik tayyorlanadi.</div>
+                  <div style={{ fontWeight: 600 }}>{t('new_student_ready_title')}</div>
+                  <div style={{ opacity: 0.85 }}>{t('new_student_ready_desc')}</div>
                 </div>
               </div>
             </div>
@@ -927,13 +931,13 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
           )}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-            <button className="btn ghost" onClick={onBack}>Bekor qilish</button>
+            <button className="btn ghost" onClick={onBack}>{t('cancel')}</button>
             <div style={{ flex: 1 }}></div>
-            {step > 1 && <button className="btn" onClick={() => setStep(step - 1)}><I.ArrowLeft size={14}/> Oldingi</button>}
-            {step < 3 && <button className="btn primary" onClick={() => setStep(step + 1)}>Keyingi <I.ArrowRight size={14}/></button>}
+            {step > 1 && <button className="btn" onClick={() => setStep(step - 1)}><I.ArrowLeft size={14}/> {t('prev')}</button>}
+            {step < 3 && <button className="btn primary" onClick={() => setStep(step + 1)}>{t('next')} <I.ArrowRight size={14}/></button>}
             {step === 3 && (
               <button className="btn primary" onClick={handleSubmit} disabled={saving}>
-                <I.Check size={14}/> {saving ? 'Sizning xujjatingiz tayyorlanmoqda...' : "O'quvchini yaratish"}
+                <I.Check size={14}/> {saving ? t('new_student_creating') : t('new_student_create_btn')}
               </button>
             )}
           </div>
@@ -947,8 +951,8 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
               <I.Check size={36} color="var(--success)"/>
             </div>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Shartnomangiz tayyor!</div>
-              <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.5 }}>O'quvchi muvaffaqiyatli ro'yxatga olindi va shartnoma PDFi serverda tayyorlandi.</div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{t('contract_ready_title')}</div>
+              <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.5 }}>{t('contract_ready_desc')}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
               {createdContractId && (
@@ -961,17 +965,17 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
                       const url = URL.createObjectURL(blob);
                       window.open(url, '_blank', 'noopener,noreferrer');
                     } catch (err) {
-                      alert('Shartnomani ochib bo\'lmadi: ' + err.message);
+                      alert(t('contract_open_error') + err.message);
                     } finally {
                       setViewingContract(false);
                     }
                   }}>
-                  <I.FileText size={15}/> {viewingContract ? 'Ochilmoqda...' : "Shartnomani ko'rish"}
+                  <I.FileText size={15}/> {viewingContract ? t('contract_opening') : t('contract_view_btn')}
                 </button>
               )}
               <button className="btn ghost" style={{ justifyContent: 'center', width: '100%', padding: '11px 0', fontSize: 13.5 }}
                 onClick={() => onCreated?.()}>
-                O'quvchilar ro'yxatiga qaytish
+                {t('back_to_students')}
               </button>
             </div>
           </div>
