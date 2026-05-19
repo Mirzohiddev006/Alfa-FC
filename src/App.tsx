@@ -8,7 +8,7 @@ import { GroupsScreen, SessionsScreen, AttendanceMark, PerformanceTable } from '
 import { ContractsScreen, ContractView, GateScreen, UsersScreen, SettingsScreen, TransactionsScreen, ReportsScreen, WaitingListScreen, AuditLogsScreen } from './screens-4';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakColor } from './tweaks-panel';
 import { apiGetMe, apiLogout, getToken, setUnauthorizedHandler } from './api';
-import { LangProvider } from './lang';
+import { LangProvider, useT } from './lang';
 
 const __TWEAK_DEFAULTS = {
   theme: 'light',
@@ -101,27 +101,27 @@ export default function App() {
     return <LangProvider><LoginScreen onLogin={() => setLoggedIn(true)}/></LangProvider>;
   }
 
-  let crumbs = ['Alpha CIMS'];
+  let crumbKeys = ['app_name'];
   let activeNav = route;
-  if (route === 'dashboard') crumbs.push('Bosh sahifa');
-  if (route === 'students') crumbs.push("O'quvchilar");
-  if (route === 'students-profile') { crumbs.push("O'quvchilar"); crumbs.push("Profil"); activeNav = 'students'; }
-  if (route === 'students-new') { crumbs.push("O'quvchilar"); crumbs.push('Yangi'); activeNav = 'students'; }
-  if (route === 'groups') crumbs.push('Guruhlar');
-  if (route === 'sessions') crumbs.push('Trening sessiyalari');
-  if (route === 'attendance') crumbs.push('Davomat belgilash');
-  if (route === 'attendance-mark') { crumbs.push('Sessiyalar'); crumbs.push('Davomat'); activeNav = 'sessions'; }
-  if (route === 'performance') crumbs.push('Natijaviy jadval');
-  if (route === 'contracts') crumbs.push('Shartnomalar');
-  if (route === 'contracts-view') { crumbs.push('Shartnomalar'); crumbs.push('Ko\'rish'); activeNav = 'contracts'; }
-  if (route === 'transactions') crumbs.push('Tranzaksiyalar');
-  if (route === 'gate') crumbs.push('Darvoza loglari');
-  if (route === 'users') crumbs.push('Foydalanuvchilar');
-  if (route === 'roles') crumbs.push('Rollar va ruxsatlar');
-  if (route === 'settings') crumbs.push('Sozlamalar');
-  if (route === 'reports') crumbs.push('Hisobotlar');
-  if (route === 'waiting-list') crumbs.push("Kutish ro'yxati");
-  if (route === 'audit-logs') crumbs.push('Audit log');
+  if (route === 'dashboard') crumbKeys.push('nav_dashboard');
+  if (route === 'students') crumbKeys.push('nav_students');
+  if (route === 'students-profile') { crumbKeys.push('nav_students'); crumbKeys.push('crumb_profile'); activeNav = 'students'; }
+  if (route === 'students-new') { crumbKeys.push('nav_students'); crumbKeys.push('crumb_new'); activeNav = 'students'; }
+  if (route === 'groups') crumbKeys.push('nav_groups');
+  if (route === 'sessions') crumbKeys.push('nav_sessions');
+  if (route === 'attendance') crumbKeys.push('crumb_attendance');
+  if (route === 'attendance-mark') { crumbKeys.push('nav_sessions'); crumbKeys.push('crumb_attendance'); activeNav = 'sessions'; }
+  if (route === 'performance') crumbKeys.push('nav_performance');
+  if (route === 'contracts') crumbKeys.push('nav_contracts');
+  if (route === 'contracts-view') { crumbKeys.push('nav_contracts'); crumbKeys.push('crumb_view'); activeNav = 'contracts'; }
+  if (route === 'transactions') crumbKeys.push('nav_transactions');
+  if (route === 'gate') crumbKeys.push('nav_gate');
+  if (route === 'users') crumbKeys.push('nav_users');
+  if (route === 'roles') crumbKeys.push('crumb_roles');
+  if (route === 'settings') crumbKeys.push('nav_settings');
+  if (route === 'reports') crumbKeys.push('nav_reports');
+  if (route === 'waiting-list') crumbKeys.push('nav_waiting_list');
+  if (route === 'audit-logs') crumbKeys.push('nav_audit_logs');
 
   return (
     <LangProvider>
@@ -138,7 +138,7 @@ export default function App() {
       />
       <div className="main">
         <Topbar
-          crumbs={crumbs}
+          crumbs={crumbKeys}
           role={T.role}
           onRoleSwitch={(r) => { T.setTweak('role', r); showToast(`Rol o'zgartirildi: ${r}`); }}
           canSwitchRole={!currentUser || currentUser?.roles?.some(r => r.name === 'Super Admin')}

@@ -1,9 +1,13 @@
 // @ts-nocheck
 import React from 'react';
 import { Icon } from './icons';
+import { useT } from './lang';
 
-export function SearchableGroupSelect({ value, onChange, groups, placeholder = "Barcha guruhlar" }) {
+export function SearchableGroupSelect({ value, onChange, groups, placeholder }) {
   const I = Icon;
+  const { t } = useT();
+  const defaultPlaceholder = t('students_all_groups');
+  const ph = placeholder ?? defaultPlaceholder;
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState('');
   const ref = React.useRef(null);
@@ -17,7 +21,7 @@ export function SearchableGroupSelect({ value, onChange, groups, placeholder = "
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button type="button" onClick={() => setOpen(o => !o)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', minWidth: 180, justifyContent: 'space-between', whiteSpace: 'nowrap' }}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedGroup ? selectedGroup.name : placeholder}</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedGroup ? selectedGroup.name : ph}</span>
         <I.ChevronDown size={14} style={{ flexShrink: 0 }} />
       </button>
       {open && (
@@ -25,11 +29,11 @@ export function SearchableGroupSelect({ value, onChange, groups, placeholder = "
           <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface-2)', borderRadius: 6, padding: '4px 8px' }}>
               <I.Search size={13} color="var(--muted)" />
-              <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Qidirish..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12.5, flex: 1, color: 'var(--text)' }} />
+              <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={t('search_placeholder')} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12.5, flex: 1, color: 'var(--text)' }} />
             </div>
           </div>
           <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-            {[{ id: 'all', name: placeholder }, ...filtered].map(g => {
+            {[{ id: 'all', name: ph }, ...filtered].map(g => {
               const isSelected = g.id === 'all' ? (!value || value === 'all' || value === '') : String(value) === String(g.id);
               return (
                 <div key={g.id} onClick={() => { onChange(g.id === 'all' ? '' : String(g.id)); setOpen(false); setQ(''); }}
@@ -41,7 +45,7 @@ export function SearchableGroupSelect({ value, onChange, groups, placeholder = "
                 </div>
               );
             })}
-            {filtered.length === 0 && <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--muted)' }}>Topilmadi</div>}
+            {filtered.length === 0 && <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--muted)' }}>{t('not_found')}</div>}
           </div>
         </div>
       )}

@@ -155,7 +155,7 @@ export function Topbar({ crumbs, role, onRoleSwitch, canSwitchRole, theme, onThe
         {crumbs.map((c, i) => (
           <React.Fragment key={i}>
             {i > 0 && <I.ChevronRight size={14}/>}
-            <span className={i === crumbs.length - 1 ? 'current' : ''}>{c}</span>
+            <span className={i === crumbs.length - 1 ? 'current' : ''}>{t(c) || c}</span>
           </React.Fragment>
         ))}
       </div>

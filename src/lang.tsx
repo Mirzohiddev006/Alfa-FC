@@ -759,6 +759,13 @@ const UZ = {
   import_col_group: 'Guruh nomi',
   btn_edit: 'Tahrirlash',
   btn_delete: "O'chirish",
+  app_name: 'Alpha CIMS',
+  crumb_profile: 'Profil',
+  crumb_new: 'Yangi',
+  crumb_attendance: 'Davomat',
+  crumb_view: "Ko'rish",
+  crumb_roles: 'Rollar va ruxsatlar',
+  nav_gate: 'Darvoza loglari',
 };
 
 const RU: typeof UZ = {
@@ -1519,6 +1526,13 @@ const RU: typeof UZ = {
   import_col_group: 'Название группы',
   btn_edit: 'Изменить',
   btn_delete: 'Удалить',
+  app_name: 'Alpha CIMS',
+  crumb_profile: 'Профиль',
+  crumb_new: 'Новый',
+  crumb_attendance: 'Посещаемость',
+  crumb_view: 'Просмотр',
+  crumb_roles: 'Роли и права',
+  nav_gate: 'Журнал входа',
 };
 
 type LangKey = keyof typeof UZ;

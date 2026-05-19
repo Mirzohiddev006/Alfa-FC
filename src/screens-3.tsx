@@ -753,7 +753,7 @@ export function SessionsScreen({ onMark }) {
       <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
         <SearchableGroupSelect value={groupFilter} onChange={v => setGroupFilter(v)} groups={groups} />
-        {groupFilter && <button className="btn sm ghost" onClick={() => setGroupFilter('')}><I.X size={13}/> Filtr olib tashlash</button>}
+        {groupFilter && <button className="btn sm ghost" onClick={() => setGroupFilter('')}><I.X size={13}/> {t('clear_filters')}</button>}
       </div>
       <div className="card" style={{ marginBottom: 16, padding: 14 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
