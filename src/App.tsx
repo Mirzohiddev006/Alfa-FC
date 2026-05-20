@@ -46,8 +46,13 @@ export default function App() {
       if (res) {
         setCurrentUser(res.user);
         setPermissions(res.permissions || []);
-        const rawRole = res.user?.roles?.[0]?.name;
-        const roleName = (rawRole ? normalizeRoleName(rawRole) : null) || rawRole || 'Coach';
+        let roleName;
+        if (res.user?.is_super_admin) {
+          roleName = 'Super Admin';
+        } else {
+          const rawRole = res.user?.roles?.[0]?.name;
+          roleName = (rawRole ? normalizeRoleName(rawRole) : null) || rawRole || 'Coach';
+        }
         setTweak('role', roleName);
       } else {
         setLoggedIn(false);
@@ -142,7 +147,7 @@ export default function App() {
           crumbs={crumbKeys}
           role={T.role}
           onRoleSwitch={(r) => { T.setTweak('role', r); showToast(`Rol o'zgartirildi: ${r}`); }}
-          canSwitchRole={!!currentUser?.roles?.some(r => normalizeRoleName(r.name) === 'Super Admin')}
+          canSwitchRole={!!(currentUser?.is_super_admin || currentUser?.roles?.some(r => normalizeRoleName(r.name) === 'Super Admin'))}
           theme={T.theme}
           onTheme={(th) => T.setTweak('theme', th)}
           onSignOut={handleSignOut}
