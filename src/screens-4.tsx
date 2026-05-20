@@ -103,7 +103,7 @@ function statusChip(status, t = (k) => k) {
 
 // ─── Contracts ───────────────────────────────────────────────────────────────
 
-export function ContractsScreen({ onOpenContract, onToast }) {
+export function ContractsScreen({ onOpenContract, onNavigateToStudent, onToast }) {
   const I = Icon;
   const { t } = useT();
   const [contracts, setContracts] = React.useState([]);
@@ -267,7 +267,10 @@ export function ContractsScreen({ onOpenContract, onToast }) {
               {rows.map((c) => (
                 <tr key={c.id} onClick={() => onOpenContract?.(c.id)} style={{ cursor: 'pointer' }}>
                   <td style={{ fontWeight: 700 }}>{c.contract_number}</td>
-                  <td style={{ color: 'var(--text-2)' }}>{c.custom_fields?.customer?.full_name || '—'}</td>
+                  <td onClick={c.student_id ? e => { e.stopPropagation(); onNavigateToStudent?.(c.student_id); } : undefined}
+                    style={{ color: 'var(--text-2)', ...(c.student_id && onNavigateToStudent ? { cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--muted)' } : {}) }}>
+                    {c.custom_fields?.customer?.full_name || '—'}
+                  </td>
                   <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5 }}>
                     {c.start_date || '—'} <span style={{ color: 'var(--muted)' }}>→</span> {c.end_date || '—'}
                   </td>
@@ -324,7 +327,7 @@ export function ContractsScreen({ onOpenContract, onToast }) {
   );
 }
 
-export function ContractView({ contractId, onBack, onToast }) {
+export function ContractView({ contractId, onBack, onToast, onNavigateToStudent }) {
   const I = Icon;
   const { t } = useT();
   const [contract, setContract] = React.useState(null);
@@ -478,6 +481,11 @@ export function ContractView({ contractId, onBack, onToast }) {
           <div className="page-sub">{t('contracts_detail_subtitle')}</div>
         </div>
         <div className="page-actions">
+          {contract.student_id && onNavigateToStudent && (
+            <button className="btn ghost" onClick={() => onNavigateToStudent(contract.student_id)}>
+              <I.User size={15} /> {studentName}
+            </button>
+          )}
           <button className="btn ghost" onClick={() => {
             setEditForm({
               monthly_fee: String(contract.monthly_fee || ''),
