@@ -143,9 +143,12 @@ export async function apiLogin(phone_or_email, password) {
 
 export async function apiGetMe() {
   const data = unwrapData(await apiFetch('/auth/me'));
+  // API may return { user: {...}, permissions: [...] } or the user object directly
+  const user = data?.user ?? data;
+  const permissions = data?.permissions || user?.permissions || [];
   return {
-    user: data,
-    permissions: data?.permissions || [],
+    user,
+    permissions,
     data,
   };
 }
