@@ -12,7 +12,7 @@ import {
   apiUploadCoachSessionKonspekt, apiGetCoachMyAttendances,
 } from './api';
 import { useCoachGroupsQuery, useGroupPerformanceTableQuery } from './features/performance-table/model/use-performance-table';
-import { SearchableGroupSelect } from './components';
+import { SearchableGroupSelect, SearchableSelect } from './components';
 import { useT } from './lang';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -39,10 +39,11 @@ function GroupFormFields({ form, setForm, coaches }) {
       </div>
       <div className="field">
         <label>{t('groups_coach_label')}</label>
-        <select value={form.coach_id} onChange={e => setForm(p => ({ ...p, coach_id: e.target.value }))}>
-          <option value="">{t('groups_coach_none')}</option>
-          {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-        </select>
+        <SearchableSelect
+          value={form.coach_id}
+          onChange={v => setForm(p => ({ ...p, coach_id: v }))}
+          options={[{ value: '', label: t('groups_coach_none') }, ...coaches.map(c => ({ value: String(c.id), label: c.full_name }))]}
+        />
       </div>
     </div>
   );
@@ -415,7 +416,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup, onT
 
       {/* New group modal */}
       {showNew && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }} onClick={() => setShowNew(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }}>
           <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{t('groups_new_title')}</h3>
@@ -434,7 +435,7 @@ export function GroupsScreen({ onOpen, selectedGroupId = null, onCloseGroup, onT
 
       {/* Edit group modal */}
       {editingGroup && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }} onClick={() => setEditingGroup(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,20,38,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 150 }}>
           <div className="card" style={{ width: 460, padding: 24, boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{t('groups_edit_title')}</h3>
@@ -1379,9 +1380,12 @@ export function PerformanceTable() {
         </div>
         <div className="page-actions">
           <SearchableGroupSelect value={selectedGroupId || ''} onChange={v => { setSelectedGroupId(v ? Number(v) : null); exitEditMode(); }} groups={groups} placeholder={t('group_select_ph')} />
-          <select value={seasonYear} onChange={e => { setSeasonYear(Number(e.target.value)); exitEditMode(); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <SearchableSelect
+            value={String(seasonYear)}
+            onChange={v => { setSeasonYear(Number(v)); exitEditMode(); }}
+            options={[currentYear, currentYear - 1, currentYear - 2].map(y => ({ value: String(y), label: String(y) }))}
+            style={{ minWidth: 100 }}
+          />
           <button className="btn" onClick={handleExport} disabled={!selectedGroupId}><I.Download size={15}/> Excel</button>
           {editMode ? (
             <>

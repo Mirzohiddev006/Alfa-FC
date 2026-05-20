@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { Icon } from './icons';
-import { Sidebar, Topbar } from './shell';
+import { Sidebar, Topbar, normalizeRoleName } from './shell';
 import { LoginScreen, Dashboard } from './screens-1';
 import { StudentsList, StudentProfile, StudentNew } from './screens-2';
 import { GroupsScreen, SessionsScreen, AttendanceMark, PerformanceTable } from './screens-3';
@@ -46,7 +46,8 @@ export default function App() {
       if (res) {
         setCurrentUser(res.user);
         setPermissions(res.permissions || []);
-        const roleName = res.user?.roles?.[0]?.name || 'Super Admin';
+        const rawRole = res.user?.roles?.[0]?.name;
+        const roleName = (rawRole ? normalizeRoleName(rawRole) : null) || rawRole || 'Coach';
         setTweak('role', roleName);
       } else {
         setLoggedIn(false);
@@ -141,7 +142,7 @@ export default function App() {
           crumbs={crumbKeys}
           role={T.role}
           onRoleSwitch={(r) => { T.setTweak('role', r); showToast(`Rol o'zgartirildi: ${r}`); }}
-          canSwitchRole={!currentUser || currentUser?.roles?.some(r => r.name === 'Super Admin')}
+          canSwitchRole={!!currentUser?.roles?.some(r => normalizeRoleName(r.name) === 'Super Admin')}
           theme={T.theme}
           onTheme={(th) => T.setTweak('theme', th)}
           onSignOut={handleSignOut}

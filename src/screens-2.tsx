@@ -10,7 +10,7 @@ import {
   apiUploadStudentPhoto, apiUploadStudentPassport, apiUploadStudentExtraFile,
   apiContractPdfUrl, apiGetContractPdf, apiDownloadStudentFile,
 } from './api';
-import { SearchableGroupSelect } from './components';
+import { SearchableGroupSelect, SearchableSelect } from './components';
 import { useT } from './lang';
 
 const AVATAR_COLORS = ['#0F1F4D', '#C8202C', '#0E7C5E', '#7B2FBE', '#D97706', '#0284C7'];
@@ -159,12 +159,16 @@ export function StudentsList({ onOpen, onNew, onToast }) {
             <span className="icon-l"><I.Search size={15}/></span>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('students_search')}/>
           </div>
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            <option value="all">{t('students_all_statuses')}</option>
-            <option value="active">{t('status_active')}</option>
-            <option value="inactive">{t('status_inactive')}</option>
-            <option value="archived">{t('status_archived')}</option>
-          </select>
+          <SearchableSelect
+            value={status}
+            onChange={v => { setStatus(v); setPage(1); }}
+            options={[
+              { value: 'all', label: t('students_all_statuses') },
+              { value: 'active', label: t('status_active') },
+              { value: 'inactive', label: t('status_inactive') },
+              { value: 'archived', label: t('status_archived') },
+            ]}
+          />
           <SearchableGroupSelect value={groupId} onChange={v => { setGroupId(v === 'all' ? '' : v); setPage(1); }} groups={groups} placeholder={t('students_all_groups')} />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 12.5 }}>
             {selected.length > 0 && <span style={{ color: 'var(--text)', fontWeight: 600 }}>{selected.length} {t('students_selected')}</span>}
@@ -708,14 +712,12 @@ export function StudentProfile({ studentId, onBack }) {
               ))}
               <div>
                 <label style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>{t('profile_blood')}</label>
-                <select
+                <SearchableSelect
                   value={editForm.ampula || 'O(+)'}
-                  onChange={(e) => setEditForm(p => ({ ...p, ampula: e.target.value }))}
-                  disabled={editLoading}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
-                >
-                  {['O(+)', 'O(-)', 'A(+)', 'A(-)', 'B(+)', 'B(-)', 'AB(+)', 'AB(-)'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                  onChange={v => setEditForm(p => ({ ...p, ampula: v }))}
+                  options={['O(+)', 'O(-)', 'A(+)', 'A(-)', 'B(+)', 'B(-)', 'AB(+)', 'AB(-)'].map(v => ({ value: v, label: v }))}
+                  style={{ width: '100%' }}
+                />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -872,9 +874,11 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
               <div className="field"><label>{t('field_pnfl')} <span className="req">*</span></label><input maxLength={14} value={form.pnfl} onChange={e => setF('pnfl', e.target.value)} placeholder="14 ta raqam"/></div>
               <div className="field"><label>{t('field_phone')}</label><input value={form.phone} onChange={e => setF('phone', e.target.value)} placeholder="+998 90 123 45 67"/></div>
               <div className="field"><label>{t('field_blood')}</label>
-                <select value={form.ampula} onChange={e => setF('ampula', e.target.value)}>
-                  <option>O(+)</option><option>A(+)</option><option>B(+)</option><option>AB(+)</option>
-                </select>
+                <SearchableSelect
+                  value={form.ampula || 'O(+)'}
+                  onChange={v => setF('ampula', v)}
+                  options={['O(+)', 'O(-)', 'A(+)', 'A(-)', 'B(+)', 'B(-)', 'AB(+)', 'AB(-)'].map(v => ({ value: v, label: v }))}
+                />
               </div>
               <div className="field"><label>{t('field_nationality')}</label><input value={form.millati} onChange={e => setF('millati', e.target.value)} placeholder="O'zbek"/></div>
               <div className="field" style={{ gridColumn: 'span 2' }}><label>{t('field_address')}</label><input value={form.address} onChange={e => setF('address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { Icon } from './icons';
-import { SearchableGroupSelect } from './components';
+import { SearchableGroupSelect, SearchableSelect } from './components';
 import { useT } from './lang';
 import {
   apiGetContracts,
@@ -232,16 +232,16 @@ export function ContractsScreen({ onOpenContract, onToast }) {
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('contracts_search')} />
           </div>
           {tab === 'active' && (
-            <select
+            <SearchableSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}
-            >
-              <option value="all">{t('contracts_all_statuses')}</option>
-              <option value="ACTIVE">{t('status_active')}</option>
-              <option value="EXPIRED">{t('status_cancelled')}</option>
-              <option value="ARCHIVED">{t('status_archived')}</option>
-            </select>
+              onChange={v => setStatusFilter(v)}
+              options={[
+                { value: 'all', label: t('contracts_all_statuses') },
+                { value: 'ACTIVE', label: t('status_active') },
+                { value: 'EXPIRED', label: t('status_cancelled') },
+                { value: 'ARCHIVED', label: t('status_archived') },
+              ]}
+            />
           )}
           <div style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{rows.length} {t('students_results')}</div>
         </div>
@@ -671,11 +671,16 @@ export function ContractView({ contractId, onBack, onToast }) {
             </div>
             <div className="field" style={{ marginBottom: 14 }}>
               <label>{t('contracts_new_status_label')}</label>
-              <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={{ height: 38, width: '100%', padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-                <option value="ACTIVE">{t('status_active')} (ACTIVE)</option>
-                <option value="EXPIRED">{t('status_cancelled')} (EXPIRED)</option>
-                <option value="ARCHIVED">{t('status_archived')} (ARCHIVED)</option>
-              </select>
+              <SearchableSelect
+                value={newStatus}
+                onChange={v => setNewStatus(v)}
+                options={[
+                  { value: 'ACTIVE', label: `${t('status_active')} (ACTIVE)` },
+                  { value: 'EXPIRED', label: `${t('status_cancelled')} (EXPIRED)` },
+                  { value: 'ARCHIVED', label: `${t('status_archived')} (ARCHIVED)` },
+                ]}
+                style={{ width: '100%' }}
+              />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="btn ghost" onClick={() => setStatusModal(false)}>{t('cancel')}</button>
@@ -738,11 +743,15 @@ export function GateLogsScreen() {
           <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }} />
           <span style={{ color: 'var(--muted)', fontSize: 13 }}>—</span>
           <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }} />
-          <select value={allowedFilter} onChange={e => { setAllowedFilter(e.target.value); setPage(1); }} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-            <option value="">{t('gate_all_option')}</option>
-            <option value="true">{t('gate_allowed_chip')}</option>
-            <option value="false">{t('gate_denied_chip')}</option>
-          </select>
+          <SearchableSelect
+            value={allowedFilter}
+            onChange={v => { setAllowedFilter(v); setPage(1); }}
+            options={[
+              { value: '', label: t('gate_all_option') },
+              { value: 'true', label: t('gate_allowed_chip') },
+              { value: 'false', label: t('gate_denied_chip') },
+            ]}
+          />
         </div>
       </div>
 
@@ -1283,10 +1292,11 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
               </div>
               <div className="field">
                 <label>{t('users_col_status')}</label>
-                <select value={userForm.status} onChange={e => setUserForm(p => ({ ...p, status: e.target.value }))}>
-                  <option value="active">{t('users_active_chip')}</option>
-                  <option value="inactive">{t('users_inactive_chip')}</option>
-                </select>
+                <SearchableSelect
+                  value={userForm.status}
+                  onChange={v => setUserForm(p => ({ ...p, status: v }))}
+                  options={[{ value: 'active', label: t('users_active_chip') }, { value: 'inactive', label: t('users_inactive_chip') }]}
+                />
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
                 <label>{t('users_role_select_label')}</label>
@@ -1342,10 +1352,11 @@ export function UsersScreen({ initialView = 'users', onToast } = {}) {
               </div>
               <div className="field">
                 <label>{t('users_col_status')}</label>
-                <select value={editUserForm.status} onChange={e => setEditUserForm(p => ({ ...p, status: e.target.value }))}>
-                  <option value="active">{t('users_active_chip')}</option>
-                  <option value="inactive">{t('users_inactive_chip')}</option>
-                </select>
+                <SearchableSelect
+                  value={editUserForm.status}
+                  onChange={v => setEditUserForm(p => ({ ...p, status: v }))}
+                  options={[{ value: 'active', label: t('users_active_chip') }, { value: 'inactive', label: t('users_inactive_chip') }]}
+                />
               </div>
               {!editingUser.is_super_admin && (
                 <div className="field" style={{ gridColumn: 'span 2' }}>
@@ -2045,23 +2056,32 @@ export function TransactionsScreen({ onToast } = {}) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        <select value={scope} onChange={e => { setScope(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="all">{t('tx_scope_all')}</option>
-          <option value="unassigned">{t('tx_scope_unassigned')}</option>
-        </select>
-        <select value={source} onChange={e => { setSource(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">{t('tx_src_all')}</option>
-          <option value="cash">{t('tx_src_cash')}</option>
-          <option value="click">Click</option>
-          <option value="payme">Payme</option>
-          <option value="bank">{t('tx_src_bank')}</option>
-        </select>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">{t('tx_st_all')}</option>
-          <option value="success">{t('tx_st_success')}</option>
-          <option value="pending">{t('tx_st_pending')}</option>
-          <option value="cancelled">{t('tx_st_cancelled')}</option>
-        </select>
+        <SearchableSelect
+          value={scope}
+          onChange={v => { setScope(v); setPage(1); }}
+          options={[{ value: 'all', label: t('tx_scope_all') }, { value: 'unassigned', label: t('tx_scope_unassigned') }]}
+        />
+        <SearchableSelect
+          value={source}
+          onChange={v => { setSource(v); setPage(1); }}
+          options={[
+            { value: '', label: t('tx_src_all') },
+            { value: 'cash', label: t('tx_src_cash') },
+            { value: 'click', label: 'Click' },
+            { value: 'payme', label: 'Payme' },
+            { value: 'bank', label: t('tx_src_bank') },
+          ]}
+        />
+        <SearchableSelect
+          value={statusFilter}
+          onChange={v => { setStatusFilter(v); setPage(1); }}
+          options={[
+            { value: '', label: t('tx_st_all') },
+            { value: 'success', label: t('tx_st_success') },
+            { value: 'pending', label: t('tx_st_pending') },
+            { value: 'cancelled', label: t('tx_st_cancelled') },
+          ]}
+        />
         <input type="number" placeholder={t('year_label')} value={paymentYear} onChange={e => { setPaymentYear(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 80 }} />
         <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
@@ -2289,12 +2309,16 @@ export function TransactionsScreen({ onToast } = {}) {
               </div>
               <div className="field">
                 <label>{t('tx_src_label')}</label>
-                <select value={manualForm.source} onChange={e => setManualForm(p => ({ ...p, source: e.target.value }))}>
-                  <option value="cash">{t('tx_src_cash')}</option>
-                  <option value="click">Click</option>
-                  <option value="payme">Payme</option>
-                  <option value="bank">{t('tx_src_bank')}</option>
-                </select>
+                <SearchableSelect
+                  value={manualForm.source}
+                  onChange={v => setManualForm(p => ({ ...p, source: v }))}
+                  options={[
+                    { value: 'cash', label: t('tx_src_cash') },
+                    { value: 'click', label: 'Click' },
+                    { value: 'payme', label: 'Payme' },
+                    { value: 'bank', label: t('tx_src_bank') },
+                  ]}
+                />
               </div>
               <div className="field">
                 <label>{t('tx_py_label')}</label>
@@ -2722,15 +2746,21 @@ export function ReportsScreen() {
       {tab === 'payers' && (
         <div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-            <select value={payersYear} onChange={e => setPayersYear(Number(e.target.value))} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-              {[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <select value={payersMonth} onChange={e => setPayersMonth(e.target.value)} style={{ height: 38, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)' }}>
-              <option value="">{t('rpt_all_months')}</option>
-              {['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'].map((m, i) => (
-                <option key={i+1} value={i+1}>{m}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={String(payersYear)}
+              onChange={v => setPayersYear(Number(v))}
+              options={[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => ({ value: String(y), label: String(y) }))}
+              style={{ minWidth: 100 }}
+            />
+            <SearchableSelect
+              value={String(payersMonth)}
+              onChange={v => setPayersMonth(v)}
+              options={[
+                { value: '', label: t('rpt_all_months') },
+                ...['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'].map((m, i) => ({ value: String(i + 1), label: m })),
+              ]}
+              style={{ minWidth: 140 }}
+            />
             <div style={{ flex: 1 }} />
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>{payers.length} {t('rpt_payers_count_sfx')}</div>
             <button className="btn" onClick={handlePayersExport}><I.Download size={15} /> Excel export</button>
@@ -3151,25 +3181,33 @@ export function AuditLogsScreen() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        <select value={entityType} onChange={e => { setEntityType(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">{t('all')} {t('audit_col_entity').toLowerCase()}</option>
-          <option value="student">student</option>
-          <option value="user">user</option>
-          <option value="contract">contract</option>
-          <option value="session">session</option>
-          <option value="group">group</option>
-          <option value="transaction">transaction</option>
-          <option value="attendance">attendance</option>
-        </select>
-        <select value={action} onChange={e => { setAction(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }}>
-          <option value="">{t('all')} {t('audit_col_action').toLowerCase()}</option>
-          <option value="CREATE">CREATE</option>
-          <option value="UPDATE">UPDATE</option>
-          <option value="DELETE">DELETE</option>
-          <option value="LOGIN">LOGIN</option>
-          <option value="CANCEL">CANCEL</option>
-          <option value="TERMINATE">TERMINATE</option>
-        </select>
+        <SearchableSelect
+          value={entityType}
+          onChange={v => { setEntityType(v); setPage(1); }}
+          options={[
+            { value: '', label: `${t('all')} ${t('audit_col_entity').toLowerCase()}` },
+            { value: 'student', label: 'student' },
+            { value: 'user', label: 'user' },
+            { value: 'contract', label: 'contract' },
+            { value: 'session', label: 'session' },
+            { value: 'group', label: 'group' },
+            { value: 'transaction', label: 'transaction' },
+            { value: 'attendance', label: 'attendance' },
+          ]}
+        />
+        <SearchableSelect
+          value={action}
+          onChange={v => { setAction(v); setPage(1); }}
+          options={[
+            { value: '', label: `${t('all')} ${t('audit_col_action').toLowerCase()}` },
+            { value: 'CREATE', label: 'CREATE' },
+            { value: 'UPDATE', label: 'UPDATE' },
+            { value: 'DELETE', label: 'DELETE' },
+            { value: 'LOGIN', label: 'LOGIN' },
+            { value: 'CANCEL', label: 'CANCEL' },
+            { value: 'TERMINATE', label: 'TERMINATE' },
+          ]}
+        />
         <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <div style={{ display: 'flex', gap: 0 }}>

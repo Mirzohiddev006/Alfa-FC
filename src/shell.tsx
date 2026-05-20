@@ -38,8 +38,17 @@ const ROLE_PERMISSIONS = {
   'Coach': ['students:view','groups:view','attendance:view','attendance:coach:mark'],
 };
 
+export function normalizeRoleName(name) {
+  if (!name) return null;
+  if (Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, name)) return name;
+  const cleaned = String(name).toLowerCase().replace(/[-_]/g, ' ').trim();
+  const match = Object.keys(ROLE_PERMISSIONS).find(k => k.toLowerCase() === cleaned);
+  return match || null;
+}
+
 function hasPerm(role, perm) {
-  const p = ROLE_PERMISSIONS[role];
+  const normalized = normalizeRoleName(role) || role;
+  const p = ROLE_PERMISSIONS[normalized];
   if (p === '*') return true;
   if (!p) return false;
   return p.includes(perm);
