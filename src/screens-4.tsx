@@ -59,6 +59,7 @@ import {
   apiUpdateWaitingList,
   apiDeleteWaitingList,
   apiGetStudent,
+  apiGetStudentTransactions,
   apiDeleteUsersBulk,
   apiGetTerminatedContracts,
   apiUpdateContract,
@@ -332,6 +333,8 @@ export function ContractView({ contractId, onBack, onToast, onNavigateToStudent 
   const { t } = useT();
   const [contract, setContract] = React.useState(null);
   const [student, setStudent] = React.useState(null);
+  const [transactions, setTransactions] = React.useState([]);
+  const [txLoading, setTxLoading] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [regenerating, setRegenerating] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -358,6 +361,11 @@ export function ContractView({ contractId, onBack, onToast, onNavigateToStudent 
       setContract(c);
       if (c?.student_id) {
         apiGetStudent(c.student_id).then(sr => setStudent(sr?.data || null)).catch(() => {});
+        setTxLoading(true);
+        apiGetStudentTransactions(c.student_id)
+          .then(tr => { const list = tr?.data || (Array.isArray(tr) ? tr : []); setTransactions(list); })
+          .catch(() => setTransactions([]))
+          .finally(() => setTxLoading(false));
       }
     } catch { }
     finally { setLoading(false); }
@@ -565,6 +573,85 @@ export function ContractView({ contractId, onBack, onToast, onNavigateToStudent 
           )}
         </div>
       </div>
+
+      {/* Payments & Debt section */}
+      {(() => {
+        const successTx = transactions.filter(tx => tx.status === 'success' || tx.status === 'completed');
+        const totalPaid = successTx.reduce((s, tx) => s + (tx.amount || 0), 0);
+        const months = contract.start_date && contract.end_date
+          ? Math.max(1, Math.round((new Date(contract.end_date) - new Date(contract.start_date)) / (1000 * 60 * 60 * 24 * 30.4)))
+          : 0;
+        const totalExpected = (contract.monthly_fee || 0) * months;
+        const debt = Math.max(0, totalExpected - totalPaid);
+
+        const srcLabel = s => ({ cash: t('tx_src_cash'), bank: t('tx_src_bank'), click: 'Click', payme: 'Payme' }[s] || s || '—');
+        const stChip = st => {
+          if (st === 'success' || st === 'completed') return <span className="chip success"><span className="chip-dot"></span>{t('tx_st_success')}</span>;
+          if (st === 'pending') return <span className="chip warning"><span className="chip-dot"></span>{t('tx_st_pending')}</span>;
+          if (st === 'cancelled') return <span className="chip danger"><span className="chip-dot"></span>{t('tx_st_cancelled')}</span>;
+          return <span className="chip">{st}</span>;
+        };
+
+        return (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 14 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('tx_st_success')}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6, color: 'var(--success)' }}>{fmt.format(totalPaid)} <span style={{ fontSize: 13, fontWeight: 500 }}>so'm</span></div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{successTx.length} ta to'lov</div>
+              </div>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('contracts_monthly_fee')} × {months} oy</div>
+                <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>{fmt.format(totalExpected)} <span style={{ fontSize: 13, fontWeight: 500 }}>so'm</span></div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{t('nav_contracts')} bo'yicha jami</div>
+              </div>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('rpt_debtors_col_debt') || 'Qarz'}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6, color: debt > 0 ? 'var(--brand-red)' : 'var(--success)' }}>
+                  {debt > 0 ? fmt.format(debt) : '0'} <span style={{ fontSize: 13, fontWeight: 500 }}>so'm</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{debt > 0 ? "To'lanmagan" : 'Qarz yo\'q'}</div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14 }}>
+                {t('nav_transactions')} <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12.5 }}>({transactions.length})</span>
+              </div>
+              {txLoading ? (
+                <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13 }}>{t('loading')}</div>
+              ) : transactions.length === 0 ? (
+                <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13, textAlign: 'center' }}>To'lovlar mavjud emas</div>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('contracts_col_number')}</th>
+                      <th>{t('contracts_monthly_fee')}</th>
+                      <th>{t('tx_src_label') || 'Manba'}</th>
+                      <th>{t('tx_pd_label') || 'Oy'}</th>
+                      <th>{t('audit_col_created') || 'Sana'}</th>
+                      <th>{t('contracts_col_status')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map(tx => (
+                      <tr key={tx.id}>
+                        <td style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--muted)', fontSize: 12.5 }}>#{tx.id}</td>
+                        <td style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmt.format(tx.amount || 0)} so'm</td>
+                        <td>{srcLabel(tx.source)}</td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5 }}>{tx.payment_month ? `${tx.payment_year || ''}/${String(tx.payment_month).padStart(2,'0')}` : '—'}</td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5 }}>{(tx.created_at || '').slice(0, 10) || '—'}</td>
+                        <td>{stChip(tx.status)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Terminate modal */}
       {terminateModal && (
