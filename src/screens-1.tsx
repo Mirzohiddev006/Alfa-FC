@@ -179,7 +179,7 @@ export function Dashboard({ role, onNav }) {
 
       <div className="grid-4">
         {[
-          { labelKey: 'dashboard_stat_active_students', value: loading ? '...' : (summary?.active_students ?? '-'), spark: [60,62,64,68,70,75,78,80,82,84], color: 'var(--brand-navy)', icon: <I.Users size={18}/>, accent: 'var(--brand-navy)' },
+          { labelKey: 'dashboard_stat_active_students', value: loading ? '...' : (summary?.active_students ?? '-'), spark: [60,62,64,68,70,75,78,80,82,84], color: 'var(--brand-navy)', icon: <I.Users size={18}/>, accent: 'var(--text)' },
           { labelKey: 'dashboard_stat_today_sessions', value: loading ? '...' : (summary?.today_sessions ?? '-'), spark: [2,3,2,3,4,3,4,3,4,3], color: 'var(--success)', icon: <I.Calendar size={18}/>, accent: 'var(--success)' },
           { labelKey: 'dashboard_stat_monthly', value: loading ? '...' : fmtMln(inflow30), spark: trendPoints.length > 1 ? trendPoints : [0,1], color: 'var(--brand-gold)', icon: <I.TrendingUp size={18}/>, accent: 'var(--brand-gold)' },
           { labelKey: 'dashboard_stat_debtors', value: loading ? '...' : (summary?.total_debtors ?? '-'), spark: [8,9,8,10,11,10,9,10,11,12], color: 'var(--brand-red)', icon: <I.AlertTriangle size={18}/>, accent: 'var(--brand-red)' },
