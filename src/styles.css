@@ -54,6 +54,20 @@
   --shadow-sm: 0 1px 0 rgba(0,0,0,0.4);
   --shadow-md: 0 6px 24px -8px rgba(0,0,0,0.6);
   --shadow-lg: 0 24px 60px -24px rgba(0,0,0,0.8);
+  /* Bright semantic colors for dark mode */
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger: #F87171;
+  --brand-red: #F87171;
+  --brand-gold: #FBBF24;
+}
+
+[data-theme="dark"] .stat-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme="dark"] .stat-value {
+  color: #FFFFFF;
 }
 
 /* Ensure form controls match dark surfaces in dark theme (override browsers/defaults) */

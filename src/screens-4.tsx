@@ -78,13 +78,13 @@ function Stat({ label, value, sub, tone = 'default', icon: Ic }) {
     success: { bg: 'var(--success-soft)', border: 'transparent', val: 'var(--success)' },
     warning: { bg: 'var(--warning-soft)', border: 'transparent', val: 'var(--warning)' },
     danger: { bg: 'var(--accent-soft)', border: 'transparent', val: 'var(--brand-red)' },
-    navy: { bg: 'rgba(15,31,77,0.08)', border: 'transparent', val: 'var(--brand-navy)' },
+    navy: { bg: 'var(--brand-navy)', border: 'transparent', val: '#FFFFFF' },
   }[tone] || { bg: 'var(--surface)', border: 'var(--border)', val: 'var(--text)' };
 
   return (
     <div className="stat" style={{ background: toneStyle.bg, borderColor: toneStyle.border }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div className="stat-label">{label}</div>
+        <div className="stat-label" style={{ color: tone !== 'default' ? toneStyle.val + 'CC' : undefined }}>{label}</div>
         {Ic && <Ic size={15} color={toneStyle.val} />}
       </div>
       <div className="stat-value" style={{ color: toneStyle.val }}>{value}</div>
