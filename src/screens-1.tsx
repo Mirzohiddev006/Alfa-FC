@@ -267,7 +267,7 @@ export function Dashboard({ role, onNav }) {
         <div style={{ padding: 18, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           {[
             { label: t('dashboard_total_income'), value: fmtMln(m30?.total_inflow), color: 'var(--success)' },
-            { label: t('dashboard_transactions'), value: (m30?.successful_transactions || 0) + ' ta', color: 'var(--brand-navy)' },
+            { label: t('dashboard_transactions'), value: (m30?.successful_transactions || 0) + ' ta', color: 'var(--text)' },
             ...( m30?.source_breakdown?.map(s => ({ label: s.source === 'payme' ? 'Payme' : s.source === 'click' ? 'Click' : (t('lang_uz') === "O'ZBEK" ? 'Boshqa' : 'Другое'), value: fmtMln(s.amount), color: 'var(--brand-gold)' })) || []),
           ].map((item, i) => (
             <div key={i} style={{ flex: '1 1 140px', padding: 14, background: 'var(--surface-2)', borderRadius: 10 }}>
