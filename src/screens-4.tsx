@@ -2612,7 +2612,7 @@ export function ReportsScreen() {
       {tab === 'dashboard' && (
         <div className="grid-4" style={{ marginBottom: 16 }}>
           {[
-            { label: t('rpt_active_students'), value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--brand-navy)' },
+            { label: t('rpt_active_students'), value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--text)' },
             { label: t('rpt_today_revenue'), value: safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—', icon: I.TrendingUp, color: 'var(--success)' },
             {
               label: t('rpt_debtors_count_lbl'), value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)',
@@ -2620,7 +2620,7 @@ export function ReportsScreen() {
                 ? `${fmt.format(safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt)} so'm ${t('rpt_total_debt')}`
                 : null,
             },
-            { label: t('rpt_today_sessions'), value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy)' },
+            { label: t('rpt_today_sessions'), value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--text)' },
           ].map((item) => (
             <div key={item.label} className="stat">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -2648,7 +2648,7 @@ export function ReportsScreen() {
               {
                 label: t('rpt_paid'),
                 value: financeReport?.total_paid != null ? `${fmt.format(financeReport.total_paid)} so'm` : (txStats ? `${fmt.format(txStats.total_paid || 0)} so'm` : '—'),
-                icon: I.Check, color: 'var(--brand-navy,#0F1F4D)',
+                icon: I.Check, color: 'var(--text)',
               },
               {
                 label: t('rpt_total_debt'),
