@@ -405,10 +405,15 @@ input::placeholder, textarea::placeholder, select::placeholder {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow 0.15s;
+}
+.stat:hover {
+  box-shadow: var(--shadow-lg);
 }
 .stat-label {
   font-size: 12px;
