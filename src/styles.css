@@ -615,7 +615,7 @@ input::placeholder, textarea::placeholder, select::placeholder {
 /* Toast */
 .toast {
   position: fixed;
-  bottom: 24px;
+  top: 24px;
   right: 24px;
   background: var(--brand-navy);
   color: white;

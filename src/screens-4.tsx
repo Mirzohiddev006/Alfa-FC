@@ -1539,7 +1539,6 @@ export function SettingsScreen({ theme, setTheme } = {}) {
   const tabDefs = [
     { id: 'general', label: t('settings_tab_general'), icon: I.Settings },
     { id: 'billing', label: t('settings_tab_billing'), icon: I.CreditCard },
-    { id: 'security', label: t('settings_tab_security'), icon: I.Shield },
     { id: 'integrations', label: t('settings_tab_integrations'), icon: I.Link },
     { id: 'import', label: 'Import', icon: I.Upload },
     { id: 'backup', label: 'Backup', icon: I.Save },
@@ -1645,7 +1644,7 @@ export function SettingsScreen({ theme, setTheme } = {}) {
 
   if (loading) return <div className="empty" style={{ padding: 48 }}>{t('loading')}</div>;
 
-  const isSavingTab = ['general', 'billing', 'security', 'integrations'].includes(activeTab);
+  const isSavingTab = ['general', 'billing', 'integrations'].includes(activeTab);
 
   return (
     <div>
@@ -1712,20 +1711,6 @@ export function SettingsScreen({ theme, setTheme } = {}) {
               <div className="field"><label>{t('settings_default_monthly')}</label><input type="number" value={settings.monthly_fee_default || settings.default_monthly_fee || ''} onChange={(e) => setVal('monthly_fee_default', Number(e.target.value))} /></div>
               <div className="field"><label>{t('settings_late_fee')}</label><input type="number" value={settings.late_fee_percent || ''} onChange={(e) => setVal('late_fee_percent', Number(e.target.value))} /></div>
               <div className="field"><label>{t('settings_report_day')}</label><input type="number" value={settings.report_day || ''} onChange={(e) => setVal('report_day', Number(e.target.value))} /></div>
-            </div>
-          )}
-
-          {activeTab === 'security' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-              {[
-                ['allow_multiple_sessions', t('settings_allow_sessions')],
-                ['require_2fa_admin', t('settings_require_2fa')],
-                ['ip_whitelist_enabled', t('settings_ip_whitelist')],
-              ].map(([k, l]) => (
-                <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5 }}>
-                  <input type="checkbox" checked={!!settings[k]} onChange={(e) => setVal(k, e.target.checked)} /> {l}
-                </label>
-              ))}
             </div>
           )}
 
@@ -3226,8 +3211,12 @@ export function AuditLogsScreen() {
   const [search, setSearch] = React.useState('');
   const [searchInput, setSearchInput] = React.useState('');
   const [userFilter, setUserFilter] = React.useState('');
-  const [userFilterInput, setUserFilterInput] = React.useState('');
+  const [usersList, setUsersList] = React.useState([]);
   const [detail, setDetail] = React.useState(null);
+
+  React.useEffect(() => {
+    apiGetUsers({ page_size: 200 }).then(res => setUsersList(res?.data || [])).catch(() => {});
+  }, []);
 
   async function loadData() {
     setLoading(true);
@@ -3265,6 +3254,7 @@ export function AuditLogsScreen() {
   }
 
   const hasFilters = entityType || action || fromDate || toDate || search || userFilter;
+
 
   return (
     <div>
@@ -3305,16 +3295,20 @@ export function AuditLogsScreen() {
         />
         <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
         <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(1); }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
-        <div style={{ display: 'flex', gap: 0 }}>
-          <input placeholder={t('audit_search_user')} value={userFilterInput} onChange={e => setUserFilterInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserFilter(userFilterInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
-          <button className="btn" style={{ borderRadius: '0 8px 8px 0', height: 36 }} onClick={() => { setUserFilter(userFilterInput); setPage(1); }}><I.Search size={14} /></button>
-        </div>
+        <SearchableSelect
+          value={userFilter}
+          onChange={v => { setUserFilter(v); setPage(1); }}
+          options={[
+            { value: '', label: t('audit_search_user') },
+            ...usersList.map(u => ({ value: u.full_name, label: u.full_name })),
+          ]}
+        />
         <div style={{ display: 'flex', gap: 0 }}>
           <input placeholder={t('audit_search_input')} value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1); } }} style={{ height: 36, padding: '0 10px', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, width: 160 }} />
           <button className="btn" style={{ borderRadius: '0 8px 8px 0', height: 36 }} onClick={() => { setSearch(searchInput); setPage(1); }}><I.Search size={14} /></button>
         </div>
         {hasFilters && (
-          <button className="btn ghost" onClick={() => { setEntityType(''); setAction(''); setFromDate(''); setToDate(''); setSearch(''); setSearchInput(''); setUserFilter(''); setUserFilterInput(''); setPage(1); }} style={{ height: 36, fontSize: 13 }}>
+          <button className="btn ghost" onClick={() => { setEntityType(''); setAction(''); setFromDate(''); setToDate(''); setSearch(''); setSearchInput(''); setUserFilter(''); setPage(1); }} style={{ height: 36, fontSize: 13 }}>
             <I.X size={13} /> {t('audit_clear_btn')}
           </button>
         )}
