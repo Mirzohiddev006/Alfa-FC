@@ -2610,9 +2610,9 @@ export function ReportsScreen() {
       {loadError && <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--warning-soft)', borderRadius: 8, fontSize: 13, color: 'var(--warning)', fontWeight: 500 }}>{loadError}</div>}
 
       {tab === 'dashboard' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+        <div className="grid-4" style={{ marginBottom: 16 }}>
           {[
-            { label: t('rpt_active_students'), value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--text)' },
+            { label: t('rpt_active_students'), value: safeSummary.active_students ?? '—', icon: I.Users, color: 'var(--brand-navy)' },
             { label: t('rpt_today_revenue'), value: safeSummary.today_revenue != null ? `${fmt.format(safeSummary.today_revenue)} so'm` : '—', icon: I.TrendingUp, color: 'var(--success)' },
             {
               label: t('rpt_debtors_count_lbl'), value: safeSummary.total_debtors ?? '—', icon: I.AlertTriangle, color: 'var(--brand-red)',
@@ -2620,19 +2620,17 @@ export function ReportsScreen() {
                 ? `${fmt.format(safeSummary.total_debt ?? safeSummary.total_outstanding ?? safeSummary.outstanding_debt)} so'm ${t('rpt_total_debt')}`
                 : null,
             },
-            { label: t('rpt_today_sessions'), value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy,#0F1F4D)' },
-          ].map((item, idx, arr) => (
-            <div key={item.label} style={{
-              padding: '28px 24px',
-              borderRight: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
-              display: 'flex', flexDirection: 'column', gap: 10,
-            }}>
+            { label: t('rpt_today_sessions'), value: safeSummary.today_sessions ?? '—', icon: I.Calendar, color: 'var(--brand-navy)' },
+          ].map((item) => (
+            <div key={item.label} className="stat">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</span>
-                <item.icon size={16} color={item.color} />
+                <span className="stat-label">{item.label}</span>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: item.color, flexShrink: 0 }}>
+                  <item.icon size={18} />
+                </div>
               </div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{item.value}</div>
-              {item.sub && <div style={{ fontSize: 12, color: item.color, opacity: 0.7, marginTop: -4, fontVariantNumeric: 'tabular-nums' }}>{item.sub}</div>}
+              <div className="stat-value" style={{ color: item.color }}>{item.value}</div>
+              {item.sub && <div style={{ fontSize: 12, color: item.color, opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{item.sub}</div>}
             </div>
           ))}
         </div>
