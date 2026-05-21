@@ -1540,9 +1540,9 @@ export function SettingsScreen({ theme, setTheme } = {}) {
     { id: 'general', label: t('settings_tab_general'), icon: I.Settings },
     { id: 'billing', label: t('settings_tab_billing'), icon: I.CreditCard },
     { id: 'integrations', label: t('settings_tab_integrations'), icon: I.Link },
-    { id: 'import', label: 'Import', icon: I.Upload },
-    { id: 'backup', label: 'Backup', icon: I.Save },
-    { id: 'admin', label: 'Arxiv', icon: I.Archive },
+    { id: 'import', label: t('settings_tab_import'), icon: I.Upload },
+    { id: 'backup', label: t('settings_tab_backup'), icon: I.Save },
+    { id: 'admin', label: t('settings_tab_archive'), icon: I.Archive },
   ];
 
   React.useEffect(() => {
