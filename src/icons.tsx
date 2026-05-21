@@ -67,4 +67,5 @@ export const Icon = {
   LogOut: (p) => _I(<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>, p),
   ShieldOff: (p) => _I(<><path d="M19.7 14.3A9 9 0 0 0 12 22a9 9 0 0 1-6.7-6.7"/><path d="M12 2l8 3v5a9 9 0 0 1-.3 2.3"/><path d="M4 4l16 16"/></>, p),
   XCircle: (p) => _I(<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>, p),
+  Archive: (p) => _I(<><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5" rx="1"/><line x1="10" y1="12" x2="14" y2="12"/></>, p),
 };

@@ -1542,7 +1542,7 @@ export function SettingsScreen({ theme, setTheme } = {}) {
     { id: 'integrations', label: t('settings_tab_integrations'), icon: I.Link },
     { id: 'import', label: 'Import', icon: I.Upload },
     { id: 'backup', label: 'Backup', icon: I.Save },
-    { id: 'admin', label: 'Admin', icon: I.AlertTriangle },
+    { id: 'admin', label: 'Arxiv', icon: I.Archive },
   ];
 
   React.useEffect(() => {
