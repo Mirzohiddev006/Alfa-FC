@@ -31,7 +31,7 @@ async function refreshTokens(): Promise<void> {
 }
 
 export const http = axios.create({
-  baseURL: BASE_URL,
+  baseURL: '/api',
   headers: {
     Accept: 'application/json',
   },
