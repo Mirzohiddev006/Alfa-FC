@@ -387,7 +387,6 @@ export function StudentProfile({ studentId, onBack }) {
             { id: 'attendance', labelKey: 'profile_attendance' },
             { id: 'contract', labelKey: 'profile_contract' },
             { id: 'transactions', labelKey: 'profile_payments' },
-            { id: 'gatelogs', labelKey: 'profile_gate' },
             { id: 'files', labelKey: 'profile_files' },
           ].map(tb => (
             <div key={tb.id} className={'tab' + (tab === tb.id ? ' active' : '')} onClick={() => setTab(tb.id)}>
@@ -583,7 +582,7 @@ export function StudentProfile({ studentId, onBack }) {
           </div>
         )}
 
-        {tab === 'gatelogs' && (
+        {/* tab === 'gatelogs' && (
           <div style={{ padding: 22 }}>
             {gateLogs.length === 0 && <div className="empty">{t('profile_no_gate')}</div>}
             {gateLogs.slice(0, 30).map(log => (
@@ -603,7 +602,7 @@ export function StudentProfile({ studentId, onBack }) {
               </div>
             ))}
           </div>
-        )}
+        ) */}
 
         {tab === 'files' && (
           <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
