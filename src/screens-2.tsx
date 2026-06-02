@@ -844,8 +844,8 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
 
   async function handleSubmit() {
     setError('');
-    if (!form.first_name || !form.last_name || !form.date_of_birth || !form.pnfl) {
-      setError(t('required_student_fields'));
+    if (!form.first_name || !form.last_name || !form.date_of_birth || !form.height || !form.weight || !form.pnfl) {
+      setError(t('required_student_create_fields'));
       return;
     }
     if (pnflDigitCount(form.pnfl) !== 14) {
@@ -941,8 +941,8 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
           {step === 2 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div className="field" style={{ gridColumn: 'span 2' }}><label>{t('field_customer_name')} <span className="req">*</span></label><input value={form.customer_full_name} onChange={e => setF('customer_full_name', e.target.value)} placeholder="Karimov Ravshan Akmalovich"/></div>
-              <div className="field"><label>{t('field_passport_num')}</label><input value={form.customer_passport_number} onChange={e => setF('customer_passport_number', e.target.value)} placeholder="AB 1234567"/></div>
-              <div className="field"><label>{t('field_address')}</label><input value={form.customer_address} onChange={e => setF('customer_address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
+              <div className="field"><label>{t('field_passport_num')} <span className="req">*</span></label><input value={form.customer_passport_number} onChange={e => setF('customer_passport_number', e.target.value)} placeholder="AB 1234567"/></div>
+              <div className="field"><label>{t('field_address')} <span className="req">*</span></label><input value={form.customer_address} onChange={e => setF('customer_address', e.target.value)} placeholder="Toshkent sh., Chilonzor t."/></div>
               <div className="field"><label>{t('field_monthly_fee')} <span className="req">*</span></label><input type="number" value={form.monthly_fee_amount} onChange={e => setF('monthly_fee_amount', e.target.value)} placeholder="500000"/></div>
               <div className="field"><label>{t('field_uniform_fee')}</label><input type="number" value={form.uniform_fee_amount} onChange={e => setF('uniform_fee_amount', e.target.value)} placeholder="0"/></div>
               <div className="field"><label>{t('field_contract_start')}</label><input type="date" value={form.contract_start_date} onChange={e => setF('contract_start_date', e.target.value)}/></div>
