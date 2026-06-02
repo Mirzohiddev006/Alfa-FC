@@ -88,6 +88,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
     return m;
   }, [groups]);
 
+  const isDeletedStatusFilter = normalizeStatus(status) === 'deleted';
   const allSelected = students.length > 0 && students.every(s => selected.includes(s.id));
 
   async function handleDeleteStudent(id) {
@@ -145,7 +146,7 @@ export function StudentsList({ onOpen, onNew, onToast }) {
           <div className="page-sub">{t('students_sub')} {totalCount} {t('students_count')}</div>
         </div>
         <div className="page-actions">
-          {selected.length > 0 && (
+          {selected.length > 0 && !isDeletedStatusFilter && (
             <button className="btn danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
               <I.Trash2 size={14}/> {bulkDeleting ? t('deleting') : `${selected.length} ${t('delete')}`}
             </button>
