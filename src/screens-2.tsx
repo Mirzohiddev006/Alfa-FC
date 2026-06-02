@@ -28,7 +28,6 @@ function calcAge(dateOfBirth) {
 
 function fullName(s) { return `${s.first_name} ${s.last_name}`; }
 function normalizeStatus(status) { return String(status || '').toLowerCase(); }
-function pnflDigitCount(value) { return String(value || '').replace(/\D/g, '').length; }
 
 export function StudentsList({ onOpen, onNew, onToast }) {
   const I = Icon;
@@ -848,11 +847,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
       setError(t('required_student_create_fields'));
       return;
     }
-    if (pnflDigitCount(form.pnfl) !== 14) {
-      setError(t('pnfl_exact_14_digits'));
-      return;
-    }
-    if (!form.customer_full_name || !form.monthly_fee_amount) {
+    if (!form.customer_full_name || !form.customer_passport_number || !form.customer_address || !form.monthly_fee_amount) {
       setError(t('required_contract_fields'));
       return;
     }
@@ -922,7 +917,7 @@ export function StudentNew({ onBack, onCreated, onViewContract }) {
               <div className="field"><label>{t('field_birth_date')} <span className="req">*</span></label><input type="date" value={form.date_of_birth} onChange={e => setF('date_of_birth', e.target.value)}/></div>
               <div className="field"><label>{t('field_height')} <span className="req">*</span></label><input type="number" value={form.height} onChange={e => setF('height', e.target.value)} placeholder="140"/></div>
               <div className="field"><label>{t('field_weight')} <span className="req">*</span></label><input type="number" value={form.weight} onChange={e => setF('weight', e.target.value)} placeholder="35"/></div>
-              <div className="field"><label>{t('field_pnfl')} <span className="req">*</span></label><input value={form.pnfl} onChange={e => { const next = e.target.value; if (pnflDigitCount(next) <= 14) setF('pnfl', next); }} placeholder={t('pnfl_placeholder')}/><div style={{ fontSize: 11.5, color: pnflDigitCount(form.pnfl) === 14 ? 'var(--success)' : 'var(--muted)', marginTop: 4 }}>{pnflDigitCount(form.pnfl)}/14 {t('pnfl_digits_count')}</div></div>
+              <div className="field"><label>{t('field_pnfl')} <span className="req">*</span></label><input value={form.pnfl} onChange={e => setF('pnfl', e.target.value)} placeholder={t('pnfl_placeholder')}/></div>
               <div className="field"><label>{t('field_phone')}</label><input value={form.phone} onChange={e => setF('phone', e.target.value)} placeholder="+998 90 123 45 67"/></div>
               <div className="field"><label>{t('field_blood')}</label>
                 <SearchableSelect
